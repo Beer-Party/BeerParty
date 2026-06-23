@@ -28,11 +28,12 @@ struct BeerPartyApp: App {
         .ignoresSafeArea()
 
         RootView()
-          .padding(8)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
           .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
               .fill(Color.black.opacity(0.25))
           )
+          .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
           .rainbowGlowFrame()
       }
       .preferredColorScheme(.dark)

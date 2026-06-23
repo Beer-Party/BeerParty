@@ -15,6 +15,10 @@ struct LobbyViewBackendCoordinator {
     return try await (meta, payload)
   }
 
+  func refreshLobbyMeta(lobbyID: UUID) async throws -> LobbyMeta {
+    try await backendService.fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
+  }
+
   func fetchNewDrinks(lobbyID: UUID, after timestamp: Date) async throws -> [LobbyDrink] {
     try await backendService.fetchNewDrinks(lobbyID: lobbyID, after: timestamp)
   }
@@ -33,6 +37,64 @@ struct LobbyViewBackendCoordinator {
     )
   }
 
+  func updateDrink(
+    lobbyID: UUID,
+    drinkID: UUID,
+    name: String,
+    volumeMl: Double,
+    abv: Double
+  ) async throws -> LobbyDrink {
+    try await backendService.updateDrink(
+      lobbyID: lobbyID,
+      drinkID: drinkID,
+      name: name,
+      volumeMl: volumeMl,
+      abv: abv
+    )
+  }
+
+  func deleteDrink(lobbyID: UUID, drinkID: UUID) async throws {
+    try await backendService.deleteDrink(lobbyID: lobbyID, drinkID: drinkID)
+  }
+
+  func sendMadeItHome(lobbyID: UUID, nickname: String) async throws {
+    try await backendService.sendMadeItHome(lobbyID: lobbyID, nickname: nickname)
+  }
+
+  func createMotion(
+    lobbyID: UUID,
+    targetText: String,
+    delayMinutes: Int,
+    proposerNickname: String
+  ) async throws -> LobbyMotion {
+    try await backendService.createMotion(
+      lobbyID: lobbyID,
+      targetText: targetText,
+      delayMinutes: delayMinutes,
+      proposerNickname: proposerNickname
+    )
+  }
+
+  func fetchMotions(lobbyID: UUID) async throws -> [LobbyMotion] {
+    try await backendService.fetchMotions(lobbyID: lobbyID)
+  }
+
+  func castMotionVote(lobbyID: UUID, motionID: UUID, vote: MotionVoteChoice) async throws {
+    try await backendService.castMotionVote(lobbyID: lobbyID, motionID: motionID, vote: vote)
+  }
+
+  func closeMotion(motionID: UUID, passed: Bool) async throws {
+    try await backendService.closeMotion(motionID: motionID, passed: passed)
+  }
+
+  func notifyMotionArrivalIfNeeded(lobbyID: UUID, motionID: UUID, targetText: String) async throws -> Bool {
+    try await backendService.notifyMotionArrivalIfNeeded(
+      lobbyID: lobbyID,
+      motionID: motionID,
+      targetText: targetText
+    )
+  }
+
   func upsertMemberBAC(lobbyID: UUID, userID: UUID, bac: Double, timestamp: Date) async throws {
     try await backendService.upsertMemberBAC(
       lobbyID: lobbyID,
@@ -46,8 +108,8 @@ struct LobbyViewBackendCoordinator {
     try await backendService.fetchInviteCode(lobbyID: lobbyID)
   }
 
-  func closeLobby(lobbyID: UUID) async throws {
-    try await backendService.closeLobby(lobbyID: lobbyID)
+  func closeLobby(lobbyID: UUID, closingBy nickname: String?) async throws {
+    try await backendService.closeLobby(lobbyID: lobbyID, closingBy: nickname)
   }
 
   func leaveLobby(lobbyID: UUID) async throws {

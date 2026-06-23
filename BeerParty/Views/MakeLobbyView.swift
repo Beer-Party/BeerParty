@@ -46,18 +46,21 @@ struct MakeLobbyView: View {
 
         Section {
           HStack(spacing: 10) {
-            LiquidGlassActionButton("Cancel", isDisabled: isLoading, role: .cancel) {
+            Button("Cancel") {
               dismiss()
             }
+            .buttonStyle(.bordered)
+            .tint(.blue)
+            .disabled(isLoading)
 
-            LiquidGlassActionButton(
-              isLoading ? "Creating..." : "Create",
-              isDisabled: isLoading || !canSubmit
-            ) {
+            Button(isLoading ? "Creating..." : "Create") {
               Task { await createLobby() }
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .disabled(isLoading || !canSubmit)
           }
-          .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+          .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
         }
       }
       .navigationTitle("Make Lobby")

@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		9E15593B2F3A7C9200E02344 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9E15593A2F3A7C9200E02344 /* Supabase */; };
+		9E778C422F41C8E00073F7D7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E778C412F41C8E00073F7D7 /* WidgetKit.framework */; };
+		9E778C442F41C8E00073F7D7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E778C432F41C8E00073F7D7 /* SwiftUI.framework */; };
+		9E778C552F41C8E20073F7D7 /* BeerPartyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9E778C402F41C8E00073F7D7 /* BeerPartyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,12 +28,37 @@
 			remoteGlobalIDString = 9E1559052F3A36CD00E02344;
 			remoteInfo = BeerParty;
 		};
+		9E778C532F41C8E20073F7D7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9E1558FE2F3A36CD00E02344 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9E778C3F2F41C8E00073F7D7;
+			remoteInfo = BeerPartyWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9E778C5A2F41C8E20073F7D7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9E778C552F41C8E20073F7D7 /* BeerPartyWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		9E1559062F3A36CD00E02344 /* BeerParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BeerParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1559152F3A36CE00E02344 /* BeerPartyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeerPartyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E15591F2F3A36CE00E02344 /* BeerPartyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BeerPartyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E778C402F41C8E00073F7D7 /* BeerPartyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BeerPartyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E778C412F41C8E00073F7D7 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		9E778C432F41C8E00073F7D7 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		9EE73EDE2F41F5CF00DA3B98 /* BeerPartyWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BeerPartyWidgetExtension.entitlements; sourceTree = "<group>"; };
 		A1B2C3D42F3A36CE00E02344 /* BeerParty/Config/Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BeerParty/Config/Debug.xcconfig; sourceTree = "<group>"; };
 		A1B2C3D52F3A36CE00E02344 /* BeerParty/Config/Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BeerParty/Config/Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -42,6 +70,13 @@
 				Info.plist,
 			);
 			target = 9E1559052F3A36CD00E02344 /* BeerParty */;
+		};
+		9E778C592F41C8E20073F7D7 /* Exceptions for "BeerPartyWidget" folder in "BeerPartyWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9E778C3F2F41C8E00073F7D7 /* BeerPartyWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -62,6 +97,14 @@
 		9E1559222F3A36CE00E02344 /* BeerPartyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = BeerPartyUITests;
+			sourceTree = "<group>";
+		};
+		9E778C452F41C8E00073F7D7 /* BeerPartyWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9E778C592F41C8E20073F7D7 /* Exceptions for "BeerPartyWidget" folder in "BeerPartyWidgetExtension" target */,
+			);
+			path = BeerPartyWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -89,15 +132,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9E778C3D2F41C8E00073F7D7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E778C442F41C8E00073F7D7 /* SwiftUI.framework in Frameworks */,
+				9E778C422F41C8E00073F7D7 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		9E1558FD2F3A36CD00E02344 = {
 			isa = PBXGroup;
 			children = (
+				9EE73EDE2F41F5CF00DA3B98 /* BeerPartyWidgetExtension.entitlements */,
 				9E1559082F3A36CD00E02344 /* BeerParty */,
 				9E1559182F3A36CE00E02344 /* BeerPartyTests */,
 				9E1559222F3A36CE00E02344 /* BeerPartyUITests */,
+				9E778C452F41C8E00073F7D7 /* BeerPartyWidget */,
 				9E1559392F3A7C9200E02344 /* Frameworks */,
 				9E1559072F3A36CD00E02344 /* Products */,
 				9E1559E52F3CE7CD00E02344 /* Recovered References */,
@@ -110,6 +164,7 @@
 				9E1559062F3A36CD00E02344 /* BeerParty.app */,
 				9E1559152F3A36CE00E02344 /* BeerPartyTests.xctest */,
 				9E15591F2F3A36CE00E02344 /* BeerPartyUITests.xctest */,
+				9E778C402F41C8E00073F7D7 /* BeerPartyWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -117,6 +172,8 @@
 		9E1559392F3A7C9200E02344 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9E778C412F41C8E00073F7D7 /* WidgetKit.framework */,
+				9E778C432F41C8E00073F7D7 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -140,10 +197,12 @@
 				9E1559022F3A36CD00E02344 /* Sources */,
 				9E1559032F3A36CD00E02344 /* Frameworks */,
 				9E1559042F3A36CD00E02344 /* Resources */,
+				9E778C5A2F41C8E20073F7D7 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				9E778C542F41C8E20073F7D7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9E1559082F3A36CD00E02344 /* BeerParty */,
@@ -202,6 +261,28 @@
 			productReference = 9E15591F2F3A36CE00E02344 /* BeerPartyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		9E778C3F2F41C8E00073F7D7 /* BeerPartyWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E778C562F41C8E20073F7D7 /* Build configuration list for PBXNativeTarget "BeerPartyWidgetExtension" */;
+			buildPhases = (
+				9E778C3C2F41C8E00073F7D7 /* Sources */,
+				9E778C3D2F41C8E00073F7D7 /* Frameworks */,
+				9E778C3E2F41C8E00073F7D7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9E778C452F41C8E00073F7D7 /* BeerPartyWidget */,
+			);
+			name = BeerPartyWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BeerPartyWidgetExtension;
+			productReference = 9E778C402F41C8E00073F7D7 /* BeerPartyWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -222,6 +303,9 @@
 					9E15591E2F3A36CE00E02344 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 9E1559052F3A36CD00E02344;
+					};
+					9E778C3F2F41C8E00073F7D7 = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -245,6 +329,7 @@
 				9E1559052F3A36CD00E02344 /* BeerParty */,
 				9E1559142F3A36CE00E02344 /* BeerPartyTests */,
 				9E15591E2F3A36CE00E02344 /* BeerPartyUITests */,
+				9E778C3F2F41C8E00073F7D7 /* BeerPartyWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -265,6 +350,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9E15591D2F3A36CE00E02344 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9E778C3E2F41C8E00073F7D7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -295,6 +387,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9E778C3C2F41C8E00073F7D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -307,6 +406,11 @@
 			isa = PBXTargetDependency;
 			target = 9E1559052F3A36CD00E02344 /* BeerParty */;
 			targetProxy = 9E1559202F3A36CE00E02344 /* PBXContainerItemProxy */;
+		};
+		9E778C542F41C8E20073F7D7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9E778C3F2F41C8E00073F7D7 /* BeerPartyWidgetExtension */;
+			targetProxy = 9E778C532F41C8E20073F7D7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -434,13 +538,21 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A1B2C3D42F3A36CE00E02344 /* BeerParty/Config/Debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BPIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BeerParty/BeerParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7H7UM6QRH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BeerParty/Info.plist;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "BeerParty can share your location in the background if you enable background sharing.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "BeerParty can share your location in the background if you enable background sharing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "BeerParty uses your location to show your pin to lobby members while sharing is enabled.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BeerParty uses your photo library so you can choose a profile picture.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -451,7 +563,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.BeerParty;
+				PRODUCT_BUNDLE_IDENTIFIER = com.akselpaul.BeerParty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -467,13 +579,21 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A1B2C3D52F3A36CE00E02344 /* BeerParty/Config/Release.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BPIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BeerParty/BeerParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7H7UM6QRH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BeerParty/Info.plist;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "BeerParty can share your location in the background if you enable background sharing.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "BeerParty can share your location in the background if you enable background sharing.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "BeerParty uses your location to show your pin to lobby members while sharing is enabled.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "BeerParty uses your photo library so you can choose a profile picture.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -484,7 +604,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.BeerParty;
+				PRODUCT_BUNDLE_IDENTIFIER = com.akselpaul.BeerParty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -576,6 +696,68 @@
 			};
 			name = Release;
 		};
+		9E778C572F41C8E20073F7D7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BeerPartyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7H7UM6QRH;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeerPartyWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BeerPartyWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.akselpaul.BeerParty.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9E778C582F41C8E20073F7D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BeerPartyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U7H7UM6QRH;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeerPartyWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BeerPartyWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.akselpaul.BeerParty.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -611,6 +793,15 @@
 			buildConfigurations = (
 				9E1559302F3A36CE00E02344 /* Debug */,
 				9E1559312F3A36CE00E02344 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9E778C562F41C8E20073F7D7 /* Build configuration list for PBXNativeTarget "BeerPartyWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E778C572F41C8E20073F7D7 /* Debug */,
+				9E778C582F41C8E20073F7D7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

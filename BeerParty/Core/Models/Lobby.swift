@@ -146,6 +146,18 @@ struct CreateDrinkRequest: Encodable {
   }
 }
 
+struct UpdateDrinkRequest: Encodable {
+  let name: String
+  let volumeMl: Double
+  let abv: Double
+
+  enum CodingKeys: String, CodingKey {
+    case name
+    case volumeMl = "volume_ml"
+    case abv
+  }
+}
+
 struct UpsertLobbyBACParamsRequest: Encodable {
   let lobbyId: UUID
   let userId: UUID
@@ -159,5 +171,71 @@ struct UpsertLobbyBACParamsRequest: Encodable {
     case tbw
     case elimRate = "elim_rate"
     case updatedAt = "updated_at"
+  }
+}
+
+enum MotionVoteChoice: String, Codable, CaseIterable {
+  case aye
+  case neigh
+}
+
+enum MotionStatus: String, Codable {
+  case active
+  case closed
+}
+
+struct CreateMotionRequest: Encodable {
+  let lobbyId: UUID
+  let createdBy: UUID
+  let proposerNickname: String
+  let targetText: String
+  let delayMinutes: Int
+  let targetAt: Date
+  let votingClosesAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case lobbyId = "lobby_id"
+    case createdBy = "created_by"
+    case proposerNickname = "proposer_nickname"
+    case targetText = "target_text"
+    case delayMinutes = "delay_minutes"
+    case targetAt = "target_at"
+    case votingClosesAt = "voting_closes_at"
+  }
+}
+
+struct CreateMotionVoteRequest: Encodable {
+  let motionId: UUID
+  let lobbyId: UUID
+  let userId: UUID
+  let vote: MotionVoteChoice
+  let votedAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case motionId = "motion_id"
+    case lobbyId = "lobby_id"
+    case userId = "user_id"
+    case vote
+    case votedAt = "voted_at"
+  }
+}
+
+struct MotionResolveUpdateRequest: Encodable {
+  let status: MotionStatus
+  let passed: Bool
+  let resolvedAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case status
+    case passed
+    case resolvedAt = "resolved_at"
+  }
+}
+
+struct MotionNotifiedUpdateRequest: Encodable {
+  let notifiedAt: Date
+
+  enum CodingKeys: String, CodingKey {
+    case notifiedAt = "notified_at"
   }
 }

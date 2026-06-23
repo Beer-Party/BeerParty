@@ -10,6 +10,22 @@ import PhotosUI
 import UIKit
 
 struct ProfileSetupView: View {
+  private enum WeightUnit: String, CaseIterable, Identifiable {
+    case pounds = "lbs"
+    case kilograms = "kg"
+
+    var id: Self { self }
+
+    var label: String {
+      switch self {
+      case .pounds:
+        return "lbs"
+      case .kilograms:
+        return "kg"
+      }
+    }
+  }
+
   @EnvironmentObject var authVM: AuthViewModel
   @Environment(\.dismiss) private var dismiss
 
@@ -17,6 +33,7 @@ struct ProfileSetupView: View {
   var onSaved: (() -> Void)?
 
   @State private var weightText: String = ""
+  @State private var selectedWeightUnit: WeightUnit = .pounds
   @State private var ageText: String = ""
   @State private var gender: String = ""
   @State private var shareLocationForeground = false
@@ -62,8 +79,18 @@ struct ProfileSetupView: View {
         }
 
         Section("Profile") {
-          TextField("Weight (lbs)", text: $weightText)
+          TextField("Weight (\(selectedWeightUnit.label))", text: $weightText)
             .keyboardType(.decimalPad)
+
+          Picker("Weight unit", selection: $selectedWeightUnit) {
+            ForEach(WeightUnit.allCases) { unit in
+              Text(unit.label).tag(unit)
+            }
+          }
+          .pickerStyle(.segmented)
+          .onChange(of: selectedWeightUnit) { previousUnit, nextUnit in
+            convertDisplayedWeight(from: previousUnit, to: nextUnit)
+          }
 
           TextField("Age", text: $ageText)
             .keyboardType(.numberPad)
@@ -147,9 +174,54 @@ struct ProfileSetupView: View {
   }
 
   private var canSubmit: Bool {
-    guard let weight = Double(weightText), weight > 0 else { return false }
+    guard backendWeightPounds != nil else { return false }
     guard let age = Int(ageText), age > 0 else { return false }
     return !gender.isEmpty
+  }
+
+  private var backendWeightPounds: Double? {
+    guard let enteredWeight = Double(weightText), enteredWeight > 0 else { return nil }
+    switch selectedWeightUnit {
+    case .pounds:
+      return enteredWeight
+    case .kilograms:
+      return enteredWeight * 2.20462
+    }
+  }
+
+  private func convertDisplayedWeight(from previousUnit: WeightUnit, to nextUnit: WeightUnit) {
+    guard previousUnit != nextUnit,
+          let displayedWeight = Double(weightText),
+          displayedWeight > 0 else {
+      return
+    }
+
+    let weightInPounds: Double
+    switch previousUnit {
+    case .pounds:
+      weightInPounds = displayedWeight
+    case .kilograms:
+      weightInPounds = displayedWeight * 2.20462
+    }
+
+    let convertedWeight: Double
+    switch nextUnit {
+    case .pounds:
+      convertedWeight = weightInPounds
+    case .kilograms:
+      convertedWeight = weightInPounds / 2.20462
+    }
+
+    weightText = formattedWeight(convertedWeight, unit: nextUnit)
+  }
+
+  private func formattedWeight(_ weight: Double, unit: WeightUnit) -> String {
+    switch unit {
+    case .pounds:
+      return String(format: "%.0f", weight)
+    case .kilograms:
+      return String(format: "%.1f", weight)
+    }
   }
 
   @MainActor
@@ -168,7 +240,7 @@ struct ProfileSetupView: View {
         .execute()
         .value
 
-      weightText = String(format: "%.0f", profile.weight)
+      weightText = formattedWeight(profile.weight, unit: selectedWeightUnit)
       ageText = String(profile.age)
       gender = profile.gender
       shareLocationForeground = profile.shareLocationForeground
@@ -207,7 +279,7 @@ struct ProfileSetupView: View {
       return
     }
 
-    guard let weight = Double(weightText), let age = Int(ageText) else {
+    guard let weight = backendWeightPounds, let age = Int(ageText) else {
       message = "Please enter a valid weight and age."
       return
     }
