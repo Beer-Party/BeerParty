@@ -35,7 +35,7 @@ struct LobbyLoginView: View {
         }
 
         Section("Join Lobby") {
-          TextField("Nickname", text: $nickname)
+          TextField("Your Nickname", text: $nickname)
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
 
@@ -53,13 +53,22 @@ struct LobbyLoginView: View {
         }
 
         Section {
-          LiquidGlassActionButton(
-            isLoading ? "Joining..." : "Join",
-            isDisabled: isLoading || trimmedInviteCode.isEmpty || trimmedNickname.isEmpty
-          ) {
-            Task { await joinLobby() }
+          HStack(spacing: 10) {
+            Button("Cancel") {
+              dismiss()
+            }
+            .buttonStyle(.bordered)
+            .tint(.blue)
+            .disabled(isLoading)
+
+            Button(isLoading ? "Joining..." : "Join") {
+              Task { await joinLobby() }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .disabled(isLoading || trimmedInviteCode.isEmpty || trimmedNickname.isEmpty)
           }
-          .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+          .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
         }
       }
       .navigationTitle("Join Lobby")

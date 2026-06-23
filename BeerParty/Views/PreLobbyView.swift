@@ -9,100 +9,138 @@ import SwiftUI
 import Supabase
 
 struct PreLobbyView: View {
-  @State private var status: String = "Not checked yet"
-  @State private var userId: String = "-"
-  @State private var email: String = "-"
-  @State private var isSignedIn: Bool = false
-  @State private var isLoading: Bool = false
+  @EnvironmentObject var authVM: AuthViewModel
+  @State private var status: String = ""
   @State private var isLoadingLobbies: Bool = false
   @State private var isShowingCreateLobby: Bool = false
   @State private var isShowingJoinLobby: Bool = false
   @State private var isShowingProfileEditor: Bool = false
   @State private var selectedLobby: LobbyDestination?
-  @State private var memberLobbies: [LobbyDestination] = []
+  @State private var memberLobbies: [LobbyListItem] = []
   @State private var profilePicURL: URL?
+  @State private var currentUserID: UUID?
 
   private let imageService = ProfileImageService()
 
   var body: some View {
     NavigationStack {
-      Form {
-        Section("Auth status") {
-          HStack {
-            Text("Signed in")
-            Spacer()
-            Text(isSignedIn ? "✅ Yes" : "❌ No")
-          }
+      ZStack {
+        LinearGradient(
+          colors: [Color.orange.opacity(0.16), Color.yellow.opacity(0.08), Color.clear],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
 
-          LabeledContent("User ID", value: userId)
-          LabeledContent("Email", value: email)
+        ScrollView {
+          VStack(spacing: 14) {
+            HStack(spacing: 12) {
+              profileAvatar
+                .frame(width: 44, height: 44)
 
-          Text(status)
-            .font(.footnote)
-        }
+              VStack(alignment: .leading, spacing: 2) {
+                Text("Lobby Hub")
+                  .font(.title2.bold())
+                Text("Pick up where the party left off.")
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
+              }
 
-        Section("Actions") {
-          Button("Join lobby") {
-            isShowingJoinLobby = true
-          }
-          .disabled(isLoading || !isSignedIn)
-
-          Button("Make lobby") {
-            isShowingCreateLobby = true
-          }
-          .disabled(isLoading || !isSignedIn)
-
-          Button(isLoading ? "Checking..." : "Check session") {
-            Task { await checkSession() }
-          }
-          .disabled(isLoading)
-
-          Button("Sign out", role: .destructive) {
-            Task { await signOut() }
-          }
-          .disabled(isLoading || !isSignedIn)
-        }
-
-        Section("Lobbies") {
-          if isLoadingLobbies {
-            HStack {
-              ProgressView()
-              Text("Loading lobbies...")
-                .foregroundStyle(.secondary)
+              Spacer()
             }
-          } else if memberLobbies.isEmpty {
-            Text("You are not a member of any lobbies yet.")
-              .foregroundStyle(.secondary)
-          } else {
-            ForEach(memberLobbies) { lobby in
-              Button(lobby.lobbyName) {
-                selectedLobby = lobby
+            .padding(14)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            HStack(spacing: 10) {
+              Button {
+                isShowingJoinLobby = true
+              } label: {
+                Label("Join Lobby", systemImage: "person.2.fill")
+                  .frame(maxWidth: .infinity)
+              }
+              .buttonStyle(.borderedProminent)
+
+              Button {
+                isShowingCreateLobby = true
+              } label: {
+                Label("Make Lobby", systemImage: "sparkles")
+                  .frame(maxWidth: .infinity)
+              }
+              .buttonStyle(.bordered)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+              Text("Your Lobbies")
+                .font(.headline)
+
+              if isLoadingLobbies {
+                HStack {
+                  ProgressView()
+                  Text("Loading lobbies...")
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+              } else if memberLobbies.isEmpty {
+                Text("You are not a member of any lobbies yet.")
+                  .foregroundStyle(.secondary)
+              } else {
+                ForEach(memberLobbies) { lobby in
+                  Button {
+                    selectedLobby = lobby.destination
+                  } label: {
+                    lobbyRow(lobby)
+                  }
+                  .buttonStyle(.plain)
+                }
+              }
+
+              if !status.isEmpty {
+                Text(status)
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
               }
             }
+            .padding(14)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
           }
+          .padding(.horizontal, 14)
+          .padding(.vertical, 10)
         }
       }
-      .navigationTitle("Auth Debug")
-      .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          if isSignedIn {
+      .navigationTitle("Beer Party")
+      .safeAreaInset(edge: .top) {
+        if currentUserID != nil {
+          HStack {
             Button {
               isShowingProfileEditor = true
             } label: {
               profileAvatar
+                .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
+
+            Spacer()
+
+            Button("Sign Out") {
+              Task { await signOut() }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
           }
+          .padding(.horizontal, 16)
+          .padding(.top, 8)
+          .padding(.bottom, 6)
+          .background(.clear)
         }
       }
       .onAppear {
-        Task { await checkSession() }
+        Task { await loadInitialData() }
       }
       .sheet(isPresented: $isShowingCreateLobby) {
         MakeLobbyView { destination in
           status = "Lobby \(destination.lobbyName) created."
           selectedLobby = destination
-          if let currentUserID = UUID(uuidString: userId) {
+          if let currentUserID {
             Task { await loadMemberLobbies(for: currentUserID) }
           }
         }
@@ -111,14 +149,14 @@ struct PreLobbyView: View {
         LobbyLoginView { destination in
           status = "Joined lobby \(destination.lobbyName)."
           selectedLobby = destination
-          if let currentUserID = UUID(uuidString: userId) {
+          if let currentUserID {
             Task { await loadMemberLobbies(for: currentUserID) }
           }
         }
       }
       .sheet(isPresented: $isShowingProfileEditor) {
         ProfileSetupView(isEditingExisting: true) {
-          if let currentUserID = UUID(uuidString: userId) {
+          if let currentUserID {
             Task { await loadProfileSummary(for: currentUserID) }
           }
         }
@@ -130,6 +168,52 @@ struct PreLobbyView: View {
         )
       }
     }
+  }
+
+  @ViewBuilder
+  private func lobbyRow(_ lobby: LobbyListItem) -> some View {
+    HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 3) {
+        Text(lobby.destination.lobbyName)
+          .font(.body.weight(.semibold))
+          .foregroundStyle(lobby.isActive ? .primary : .secondary)
+
+        if lobby.isActive {
+          Label("\(lobby.memberCount) member\(lobby.memberCount == 1 ? "" : "s")", systemImage: "person.2.fill")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        } else {
+          Text("Past lobby")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+
+      Spacer()
+
+      if lobby.isActive {
+        Text("ACTIVE")
+          .font(.caption2.bold())
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color.green.opacity(0.2), in: Capsule())
+      } else {
+        Text(formattedLobbyDate(lobby.createdAt))
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 10)
+    .background(
+      RoundedRectangle(cornerRadius: 14, style: .continuous)
+        .fill(lobby.isActive ? Color.yellow.opacity(0.2) : Color.gray.opacity(0.08))
+        .overlay(
+          RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .stroke(lobby.isActive ? Color.yellow.opacity(0.85) : Color.gray.opacity(0.2), lineWidth: lobby.isActive ? 1.4 : 1)
+        )
+        .shadow(color: lobby.isActive ? Color.yellow.opacity(0.55) : .clear, radius: lobby.isActive ? 9 : 0, x: 0, y: 0)
+    )
   }
 
   private var profileAvatar: some View {
@@ -157,41 +241,27 @@ struct PreLobbyView: View {
   }
 
   @MainActor
-  private func checkSession() async {
-    isLoading = true
-    defer { isLoading = false }
-
+  private func loadInitialData() async {
     do {
       let session = try await supabase.auth.session
-      isSignedIn = true
-      userId = session.user.id.uuidString
-      email = session.user.email ?? "-"
-      status = "Session loaded successfully."
+      currentUserID = session.user.id
       await loadProfileSummary(for: session.user.id)
       await loadMemberLobbies(for: session.user.id)
     } catch {
-      isSignedIn = false
-      userId = "-"
-      email = "-"
+      currentUserID = nil
       memberLobbies = []
       profilePicURL = nil
-      status = "No session found (or not logged in yet). Error: \(error.localizedDescription)"
+      status = "Could not load session. Please sign in again."
     }
   }
 
   @MainActor
   private func signOut() async {
-    isLoading = true
-    defer { isLoading = false }
-
     do {
       try await supabase.auth.signOut()
-      status = "Signed out."
-      memberLobbies = []
-      profilePicURL = nil
-      await checkSession()
+      await authVM.loadInitialSession()
     } catch {
-      status = "Sign out failed: \(error.localizedDescription)"
+      status = "Failed to sign out: \(error.localizedDescription)"
     }
   }
 
@@ -213,30 +283,36 @@ struct PreLobbyView: View {
         return
       }
 
-      var lobbies: [LobbyDestination] = []
-      for membership in memberships {
-        do {
-          let lobby: LobbySummary = try await supabase
-            .from("lobbies")
-            .select("id,name,is_active")
-            .eq("id", value: membership.lobbyID)
-            .eq("is_active", value: true)
-            .single()
-            .execute()
-            .value
-          lobbies.append(
-            LobbyDestination(
-              lobbyID: lobby.id,
-              lobbyName: lobby.name
-            )
-          )
-        } catch {
-          // Ignore missing/inactive lobby rows for now.
-          continue
-        }
-      }
+      let lobbyIDs = memberships.map(\.lobbyID)
+      let lobbies: [LobbyListSummaryRow] = try await supabase
+        .from("lobbies")
+        .select("id,name,is_active,created_at")
+        .in("id", values: lobbyIDs)
+        .execute()
+        .value
 
-      memberLobbies = lobbies
+      let memberRows: [LobbyMemberCountRow] = try await supabase
+        .from("lobby_members")
+        .select("lobby_id")
+        .in("lobby_id", values: lobbyIDs)
+        .execute()
+        .value
+      let countsByLobbyID = Dictionary(grouping: memberRows, by: \.lobbyID).mapValues(\.count)
+
+      memberLobbies = lobbies.map { lobby in
+        LobbyListItem(
+          destination: LobbyDestination(lobbyID: lobby.id, lobbyName: lobby.name),
+          isActive: lobby.isActive,
+          memberCount: countsByLobbyID[lobby.id] ?? 1,
+          createdAt: parseLobbyTimestamp(lobby.createdAtRaw)
+        )
+      }
+      .sorted { lhs, rhs in
+        if lhs.isActive != rhs.isActive {
+          return lhs.isActive && !rhs.isActive
+        }
+        return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
+      }
     } catch {
       memberLobbies = []
       status = "Failed to load lobbies: \(error.localizedDescription)"
@@ -258,4 +334,53 @@ struct PreLobbyView: View {
       profilePicURL = nil
     }
   }
+
+  private func parseLobbyTimestamp(_ value: String?) -> Date? {
+    guard let value else { return nil }
+    let isoWithFraction = ISO8601DateFormatter()
+    isoWithFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let parsed = isoWithFraction.date(from: value) {
+      return parsed
+    }
+
+    let isoWithoutFraction = ISO8601DateFormatter()
+    isoWithoutFraction.formatOptions = [.withInternetDateTime]
+    return isoWithoutFraction.date(from: value)
+  }
+
+  private func formattedLobbyDate(_ date: Date?) -> String {
+    guard let date else { return "Unknown" }
+    return date.formatted(.dateTime.day().month(.abbreviated))
+  }
+}
+
+private struct LobbyListSummaryRow: Decodable {
+  let id: UUID
+  let name: String
+  let isActive: Bool
+  let createdAtRaw: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case name
+    case isActive = "is_active"
+    case createdAtRaw = "created_at"
+  }
+}
+
+private struct LobbyMemberCountRow: Decodable {
+  let lobbyID: UUID
+
+  enum CodingKeys: String, CodingKey {
+    case lobbyID = "lobby_id"
+  }
+}
+
+private struct LobbyListItem: Identifiable {
+  let destination: LobbyDestination
+  let isActive: Bool
+  let memberCount: Int
+  let createdAt: Date?
+
+  var id: UUID { destination.lobbyID }
 }

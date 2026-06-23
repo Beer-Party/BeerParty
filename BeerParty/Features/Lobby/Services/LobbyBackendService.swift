@@ -28,6 +28,7 @@ enum LobbyLifecycleError: LocalizedError {
   case lobbyNotFound
   case notCreator
   case lobbyClosed
+  case closeDenied
 
   var errorDescription: String? {
     switch self {
@@ -37,6 +38,22 @@ enum LobbyLifecycleError: LocalizedError {
       return "Only the lobby creator can perform this action."
     case .lobbyClosed:
       return "Lobby is closed. Drinks can no longer be added."
+    case .closeDenied:
+      return "Could not close lobby due to backend permissions."
+    }
+  }
+}
+
+enum DrinkMutationError: LocalizedError {
+  case editWindowExpired
+  case invalidInput
+
+  var errorDescription: String? {
+    switch self {
+    case .editWindowExpired:
+      return "Drinks can only be edited or deleted within 15 minutes of being added."
+    case .invalidInput:
+      return "Enter a drink name, volume, and ABV before saving."
     }
   }
 }
@@ -73,7 +90,7 @@ struct LocationSharingSettings {
 }
 
 struct LobbyDrink: Identifiable {
-  let id = UUID()
+  let id: UUID
   let userId: UUID
   let name: String
   let volumeMl: Double
@@ -98,7 +115,49 @@ struct LobbyMeta {
   let isActive: Bool
 }
 
+struct LobbyMotionVote: Identifiable {
+  let motionId: UUID
+  let userId: UUID
+  let vote: MotionVoteChoice
+  let votedAt: Date
+
+  var id: UUID { userId }
+}
+
+struct LobbyMotion: Identifiable {
+  let id: UUID
+  let lobbyId: UUID
+  let createdBy: UUID
+  let proposerNickname: String
+  let targetText: String
+  let delayMinutes: Int
+  let createdAt: Date
+  let targetAt: Date
+  let votingClosesAt: Date
+  let status: MotionStatus
+  let passed: Bool?
+  let resolvedAt: Date?
+  let notifiedAt: Date?
+  let votes: [LobbyMotionVote]
+
+  var ayeCount: Int {
+    votes.filter { $0.vote == .aye }.count
+  }
+
+  var neighCount: Int {
+    votes.filter { $0.vote == .neigh }.count
+  }
+
+  var isActive: Bool {
+    status == .active
+  }
+}
+
 struct LobbyBackendService {
+  static let madeItHomeDrinkPrefix = "__home__:"
+  static let lobbyClosedDrinkPrefix = "__closed__:"
+  static let motionArrivedDrinkPrefix = "__motion_due__:"
+
   // Loads the invite code for a specific lobby.
   func fetchInviteCode(lobbyID: UUID) async throws -> String {
     let rows: [LobbyInviteCodeRow] = try await supabase
@@ -201,8 +260,21 @@ struct LobbyBackendService {
   }
 
   // Closes the lobby by setting is_active=false. Only the creator can do this.
-  func closeLobby(lobbyID: UUID) async throws {
+  func closeLobby(lobbyID: UUID, closingBy nickname: String?) async throws {
     let session = try await supabase.auth.session
+    let ownerRows: [LobbyMetaRow] = try await supabase
+      .from("lobbies")
+      .select("id,created_by,created_at,is_active")
+      .eq("id", value: lobbyID)
+      .eq("created_by", value: session.user.id)
+      .limit(1)
+      .execute()
+      .value
+
+    guard !ownerRows.isEmpty else {
+      throw LobbyLifecycleError.notCreator
+    }
+
     let update = LobbyActiveUpdateRequest(isActive: false)
     let updatedRows: [LobbyMetaRow] = try await supabase
       .from("lobbies")
@@ -213,8 +285,25 @@ struct LobbyBackendService {
       .value
 
     guard !updatedRows.isEmpty else {
-      throw LobbyLifecycleError.notCreator
+      throw LobbyLifecycleError.closeDenied
     }
+
+    // Best-effort marker used for in-lobby "closed" event propagation; must not block closure.
+    let timestamp = Date()
+    let closer = (nickname ?? "Host").trimmingCharacters(in: .whitespacesAndNewlines)
+    let payloadName = "\(Self.lobbyClosedDrinkPrefix)\(Self.iso8601WithFractionalSeconds.string(from: timestamp))|\(closer.isEmpty ? "Host" : closer)"
+    let marker = CreateDrinkRequest(
+      lobbyId: lobbyID,
+      userId: session.user.id,
+      name: payloadName,
+      volumeMl: 0,
+      abv: 0,
+      consumedAt: timestamp
+    )
+    try? await supabase
+      .from("drinks")
+      .insert(marker)
+      .execute()
   }
 
   // Removes the current user from this lobby and deletes their lobby-specific data.
@@ -327,18 +416,262 @@ struct LobbyBackendService {
       consumedAt: Date()
     )
 
-    try await supabase
+    let insertedRows: [DrinkRow] = try await supabase
       .from("drinks")
       .insert(request)
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
       .execute()
+      .value
 
-    return LobbyDrink(
+    return insertedRows.first.flatMap(drink(from:)) ?? LobbyDrink(
+      id: UUID(),
       userId: session.user.id,
       name: name,
       volumeMl: volumeMl,
       abv: abv,
       consumedAt: request.consumedAt
     )
+  }
+
+  func updateDrink(
+    lobbyID: UUID,
+    drinkID: UUID,
+    name: String,
+    volumeMl: Double,
+    abv: Double
+  ) async throws -> LobbyDrink {
+    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty, volumeMl > 0, abv >= 0 else {
+      throw DrinkMutationError.invalidInput
+    }
+
+    let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
+    guard meta.isActive else {
+      throw LobbyLifecycleError.lobbyClosed
+    }
+
+    let session = try await supabase.auth.session
+    let cutoff = Date().addingTimeInterval(-15 * 60)
+    let request = UpdateDrinkRequest(
+      name: trimmedName,
+      volumeMl: volumeMl,
+      abv: abv
+    )
+
+    let updatedRows: [DrinkRow] = try await supabase
+      .from("drinks")
+      .update(request)
+      .eq("id", value: drinkID)
+      .eq("lobby_id", value: lobbyID)
+      .eq("user_id", value: session.user.id)
+      .gte("consumed_at", value: Self.iso8601WithFractionalSeconds.string(from: cutoff))
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
+      .execute()
+      .value
+
+    guard let updatedDrink = updatedRows.first.flatMap(drink(from:)) else {
+      throw DrinkMutationError.editWindowExpired
+    }
+
+    return updatedDrink
+  }
+
+  func deleteDrink(lobbyID: UUID, drinkID: UUID) async throws {
+    let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
+    guard meta.isActive else {
+      throw LobbyLifecycleError.lobbyClosed
+    }
+
+    let session = try await supabase.auth.session
+    let cutoff = Date().addingTimeInterval(-15 * 60)
+    let deletedRows: [DrinkRow] = try await supabase
+      .from("drinks")
+      .delete()
+      .eq("id", value: drinkID)
+      .eq("lobby_id", value: lobbyID)
+      .eq("user_id", value: session.user.id)
+      .gte("consumed_at", value: Self.iso8601WithFractionalSeconds.string(from: cutoff))
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
+      .execute()
+      .value
+
+    guard !deletedRows.isEmpty else {
+      throw DrinkMutationError.editWindowExpired
+    }
+  }
+
+  // Writes a "made it home" event as a zero-alcohol marker that all lobby members can receive.
+  func sendMadeItHome(lobbyID: UUID, nickname: String) async throws {
+    let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
+    guard meta.isActive else {
+      throw LobbyLifecycleError.lobbyClosed
+    }
+
+    let session = try await supabase.auth.session
+    let safeNickname = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+    let payloadNickname = safeNickname.isEmpty ? "Member" : safeNickname
+    let request = CreateDrinkRequest(
+      lobbyId: lobbyID,
+      userId: session.user.id,
+      name: "\(Self.madeItHomeDrinkPrefix)\(payloadNickname)",
+      volumeMl: 0,
+      abv: 0,
+      consumedAt: Date()
+    )
+
+    try await supabase
+      .from("drinks")
+      .insert(request)
+      .execute()
+  }
+
+  func createMotion(
+    lobbyID: UUID,
+    targetText: String,
+    delayMinutes: Int,
+    proposerNickname: String
+  ) async throws -> LobbyMotion {
+    let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
+    guard meta.isActive else {
+      throw LobbyLifecycleError.lobbyClosed
+    }
+
+    let session = try await supabase.auth.session
+    let now = Date()
+    let cleanTarget = targetText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanNickname = proposerNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+    let request = CreateMotionRequest(
+      lobbyId: lobbyID,
+      createdBy: session.user.id,
+      proposerNickname: cleanNickname.isEmpty ? "Member" : cleanNickname,
+      targetText: cleanTarget,
+      delayMinutes: delayMinutes,
+      targetAt: now.addingTimeInterval(TimeInterval(delayMinutes * 60)),
+      votingClosesAt: now.addingTimeInterval(10 * 60)
+    )
+
+    let rows: [LobbyMotionRow] = try await supabase
+      .from("motions")
+      .insert(request)
+      .select("id,lobby_id,created_by,proposer_nickname,target_text,delay_minutes,created_at,target_at,voting_closes_at,status,passed,resolved_at,notified_at")
+      .limit(1)
+      .execute()
+      .value
+
+    guard let row = rows.first,
+          let motion = motionFromRow(row, votesByMotionID: [:]) else {
+      throw LobbyLifecycleError.lobbyNotFound
+    }
+    return motion
+  }
+
+  func fetchMotions(lobbyID: UUID) async throws -> [LobbyMotion] {
+    let motionRows: [LobbyMotionRow] = try await supabase
+      .from("motions")
+      .select("id,lobby_id,created_by,proposer_nickname,target_text,delay_minutes,created_at,target_at,voting_closes_at,status,passed,resolved_at,notified_at")
+      .eq("lobby_id", value: lobbyID)
+      .order("created_at", ascending: false)
+      .execute()
+      .value
+
+    let voteRows: [LobbyMotionVoteRow] = try await supabase
+      .from("motion_votes")
+      .select("motion_id,user_id,vote,voted_at")
+      .eq("lobby_id", value: lobbyID)
+      .execute()
+      .value
+
+    let votesByMotionID = Dictionary(grouping: voteRows) { $0.motionId }
+    return motionRows.compactMap { motionFromRow($0, votesByMotionID: votesByMotionID) }
+  }
+
+  func castMotionVote(
+    lobbyID: UUID,
+    motionID: UUID,
+    vote: MotionVoteChoice
+  ) async throws {
+    let session = try await supabase.auth.session
+    let request = CreateMotionVoteRequest(
+      motionId: motionID,
+      lobbyId: lobbyID,
+      userId: session.user.id,
+      vote: vote,
+      votedAt: Date()
+    )
+
+    try await supabase
+      .from("motion_votes")
+      .upsert(request, onConflict: "motion_id,user_id")
+      .execute()
+  }
+
+  func closeMotion(
+    motionID: UUID,
+    passed: Bool
+  ) async throws {
+    let request = MotionResolveUpdateRequest(
+      status: .closed,
+      passed: passed,
+      resolvedAt: Date()
+    )
+
+    try await supabase
+      .from("motions")
+      .update(request)
+      .eq("id", value: motionID)
+      .eq("status", value: MotionStatus.active.rawValue)
+      .execute()
+  }
+
+  // Marks the motion as notified once and writes a broadcast marker for lobby members.
+  func notifyMotionArrivalIfNeeded(lobbyID: UUID, motionID: UUID, targetText: String) async throws -> Bool {
+    let session = try await supabase.auth.session
+    let existingRows: [LobbyMotionRow] = try await supabase
+      .from("motions")
+      .select("id,lobby_id,created_by,proposer_nickname,target_text,delay_minutes,created_at,target_at,voting_closes_at,status,passed,resolved_at,notified_at")
+      .eq("id", value: motionID)
+      .eq("lobby_id", value: lobbyID)
+      .limit(1)
+      .execute()
+      .value
+    guard let existing = existingRows.first,
+          existing.passed == true,
+          existing.notifiedAt == nil else {
+      return false
+    }
+
+    let notifyRequest = MotionNotifiedUpdateRequest(notifiedAt: Date())
+
+    let updatedRows: [MotionNotificationRow] = try await supabase
+      .from("motions")
+      .update(notifyRequest, returning: .representation)
+      .eq("id", value: motionID)
+      .eq("lobby_id", value: lobbyID)
+      .eq("passed", value: true)
+      .select("id")
+      .execute()
+      .value
+
+    guard !updatedRows.isEmpty else { return false }
+
+    let compactTarget = targetText
+      .replacingOccurrences(of: "|", with: "/")
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let payload = compactTarget.isEmpty ? "the destination" : compactTarget
+    let marker = CreateDrinkRequest(
+      lobbyId: lobbyID,
+      userId: session.user.id,
+      name: "\(Self.motionArrivedDrinkPrefix)\(motionID.uuidString)|\(payload)",
+      volumeMl: 0,
+      abv: 0,
+      consumedAt: Date()
+    )
+    try? await supabase
+      .from("drinks")
+      .insert(marker)
+      .execute()
+
+    return true
   }
 
   // Fetches members, drinks, and BAC parameters needed by the lobby BAC UI.
@@ -381,21 +714,14 @@ struct LobbyBackendService {
 
     let drinkRows: [DrinkRow] = try await supabase
       .from("drinks")
-      .select("user_id,name,volume_ml,abv,consumed_at")
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
       .eq("lobby_id", value: lobbyID)
       .order("consumed_at", ascending: true)
       .execute()
       .value
 
     let drinks = drinkRows.compactMap { row -> LobbyDrink? in
-      guard let consumedAt = parsePostgresTimestamp(row.consumedAt) else { return nil }
-      return LobbyDrink(
-        userId: row.userId,
-        name: row.name,
-        volumeMl: row.volumeMl,
-        abv: row.abv,
-        consumedAt: consumedAt
-      )
+      drink(from: row)
     }
 
     var bacParamsByUserId: [UUID: LobbyBACParamsData] = [:]
@@ -543,7 +869,7 @@ struct LobbyBackendService {
   ) async throws -> [LobbyDrink] {
     let rows: [DrinkRow] = try await supabase
       .from("drinks")
-      .select("user_id,name,volume_ml,abv,consumed_at")
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
       .eq("lobby_id", value: lobbyID)
       .gt("consumed_at", value: Self.iso8601WithFractionalSeconds.string(from: timestamp))
       .order("consumed_at", ascending: true)
@@ -551,14 +877,7 @@ struct LobbyBackendService {
       .value
 
     return rows.compactMap { row in
-      guard let consumedAt = parsePostgresTimestamp(row.consumedAt) else { return nil }
-      return LobbyDrink(
-        userId: row.userId,
-        name: row.name,
-        volumeMl: row.volumeMl,
-        abv: row.abv,
-        consumedAt: consumedAt
-      )
+      drink(from: row)
     }
   }
 
@@ -601,6 +920,48 @@ struct LobbyBackendService {
       return withFractions
     }
     return Self.iso8601.date(from: raw)
+  }
+
+  private func motionFromRow(
+    _ row: LobbyMotionRow,
+    votesByMotionID: [UUID: [LobbyMotionVoteRow]]
+  ) -> LobbyMotion? {
+    guard let createdAt = parsePostgresTimestamp(row.createdAt),
+          let targetAt = parsePostgresTimestamp(row.targetAt),
+          let votingClosesAt = parsePostgresTimestamp(row.votingClosesAt) else {
+      return nil
+    }
+
+    let voteRows = votesByMotionID[row.id] ?? []
+    let votes: [LobbyMotionVote] = voteRows.compactMap { voteRow in
+      guard let votedAt = parsePostgresTimestamp(voteRow.votedAt),
+            let vote = MotionVoteChoice(rawValue: voteRow.vote.lowercased()) else {
+        return nil
+      }
+      return LobbyMotionVote(
+        motionId: voteRow.motionId,
+        userId: voteRow.userId,
+        vote: vote,
+        votedAt: votedAt
+      )
+    }
+
+    return LobbyMotion(
+      id: row.id,
+      lobbyId: row.lobbyId,
+      createdBy: row.createdBy,
+      proposerNickname: row.proposerNickname,
+      targetText: row.targetText,
+      delayMinutes: row.delayMinutes,
+      createdAt: createdAt,
+      targetAt: targetAt,
+      votingClosesAt: votingClosesAt,
+      status: MotionStatus(rawValue: row.status.lowercased()) ?? .active,
+      passed: row.passed,
+      resolvedAt: row.resolvedAt.flatMap(parsePostgresTimestamp),
+      notifiedAt: row.notifiedAt.flatMap(parsePostgresTimestamp),
+      votes: votes.sorted { $0.votedAt < $1.votedAt }
+    )
   }
 
   // Ensures the current user has derived BAC parameters saved for this lobby.
@@ -687,6 +1048,18 @@ struct LobbyBackendService {
     formatter.formatOptions = [.withInternetDateTime]
     return formatter
   }()
+
+  private func drink(from row: DrinkRow) -> LobbyDrink? {
+    guard let consumedAt = parsePostgresTimestamp(row.consumedAt) else { return nil }
+    return LobbyDrink(
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      volumeMl: row.volumeMl,
+      abv: row.abv,
+      consumedAt: consumedAt
+    )
+  }
 }
 
 private struct LobbyMemberRow: Decodable {
@@ -724,6 +1097,7 @@ private struct MemberStateLocationRow: Decodable {
 }
 
 private struct DrinkRow: Decodable {
+  let id: UUID
   let userId: UUID
   let name: String
   let volumeMl: Double
@@ -731,6 +1105,7 @@ private struct DrinkRow: Decodable {
   let consumedAt: String
 
   enum CodingKeys: String, CodingKey {
+    case id
     case userId = "user_id"
     case name
     case volumeMl = "volume_ml"
@@ -771,6 +1146,56 @@ private struct LobbyMetaRow: Decodable {
     case createdAt = "created_at"
     case isActive = "is_active"
   }
+}
+
+private struct LobbyMotionRow: Decodable {
+  let id: UUID
+  let lobbyId: UUID
+  let createdBy: UUID
+  let proposerNickname: String
+  let targetText: String
+  let delayMinutes: Int
+  let createdAt: String
+  let targetAt: String
+  let votingClosesAt: String
+  let status: String
+  let passed: Bool?
+  let resolvedAt: String?
+  let notifiedAt: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case lobbyId = "lobby_id"
+    case createdBy = "created_by"
+    case proposerNickname = "proposer_nickname"
+    case targetText = "target_text"
+    case delayMinutes = "delay_minutes"
+    case createdAt = "created_at"
+    case targetAt = "target_at"
+    case votingClosesAt = "voting_closes_at"
+    case status
+    case passed
+    case resolvedAt = "resolved_at"
+    case notifiedAt = "notified_at"
+  }
+}
+
+private struct LobbyMotionVoteRow: Decodable {
+  let motionId: UUID
+  let userId: UUID
+  let vote: String
+  let votedAt: String
+
+  enum CodingKeys: String, CodingKey {
+    case motionId = "motion_id"
+    case userId = "user_id"
+    case vote
+    case votedAt = "voted_at"
+  }
+}
+
+private struct MotionNotificationRow: Decodable {
+  let id: UUID
 }
 
 private struct LobbyActiveUpdateRequest: Encodable {

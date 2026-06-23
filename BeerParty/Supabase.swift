@@ -49,7 +49,11 @@ private func validatedAnonKey() -> String {
   return key
 }
 
+let supabaseURLValue = validatedSupabaseURL()
+let supabaseAnonKeyValue = validatedAnonKey()
+let supabaseURLString = supabaseURLValue.absoluteString
+
 let supabase = SupabaseClient(
-  supabaseURL: validatedSupabaseURL(),
-  supabaseKey: validatedAnonKey()
+  supabaseURL: supabaseURLValue,
+  supabaseKey: supabaseAnonKeyValue
 )

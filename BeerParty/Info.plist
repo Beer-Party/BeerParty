@@ -15,18 +15,12 @@
 			</array>
 		</dict>
 	</array>
-	<key>SUPABASE_URL</key>
-	<string>$(SUPABASE_URL)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict/>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BeerParty uses your photo library so you can choose a profile picture.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>BeerParty uses your location to show your pin to lobby members while sharing is enabled.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>BeerParty can share your location in the background if you enable background sharing.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>BeerParty can share your location in the background if you enable background sharing.</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

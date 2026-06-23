@@ -1,0 +1,159 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.03078,0.00247,0.13045,1.00000",
+      "display-p3:0.80068,0.93130,1.00000,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : " top foam.svg",
+          "name" : " top foam",
+          "position" : {
+            "scale" : 1.28,
+            "translation-in-points" : [
+              0.23909090909080533,
+              92.32962943362315
+            ]
+          }
+        }
+      ],
+      "position" : {
+        "scale" : 0.99,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0
+      }
+    },
+    {
+      "blend-mode" : "normal",
+      "blur-material" : 0.04,
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "Glass.svg",
+          "name" : "Glass",
+          "opacity-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : 1
+            }
+          ],
+          "position" : {
+            "scale" : 1.25,
+            "translation-in-points" : [
+              2.8700000000000045,
+              73
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 1
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
+    },
+    {
+      "blend-mode" : "hard-light",
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.57422,0.65771,0.74268,1.00000"
+              }
+            }
+          ],
+          "glass" : false,
+          "image-name" : "Bottomfoam.svg",
+          "name" : "Bottomfoam",
+          "position" : {
+            "scale" : 1.25,
+            "translation-in-points" : [
+              0,
+              15
+            ]
+          }
+        },
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.14135,0.17156,0.56119,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "display-p3:0.67458,0.67879,0.65507,1.00000"
+              }
+            }
+          ],
+          "glass" : false,
+          "image-name" : "Drink.svg",
+          "name" : "Drink",
+          "opacity-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : 1
+            }
+          ],
+          "position" : {
+            "scale" : 1.25,
+            "translation-in-points" : [
+              0,
+              51
+            ]
+          }
+        }
+      ],
+      "lighting" : "combined",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "specular" : false,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
