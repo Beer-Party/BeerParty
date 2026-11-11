@@ -39,6 +39,12 @@ memory, so this file, `BACKLOG.md` and `AGENT_LOG.md` are everything it knows.
   done until CI is green, and anything CI cannot cover (UI, location, Live Activity)
   is listed in the PR for a human to try on a device.
 
+## Tooling notes
+
+- GitHub's GraphQL API is blocked in agent sessions, so `gh pr create`, `gh pr view`
+  and similar fail. Use REST: `gh api repos/Beer-Party/BeerParty/pulls ...`,
+  `.../issues/N/labels`, `.../commits/SHA/check-runs`.
+
 ## Style
 
 Match the surrounding code: two-space indent, SwiftUI, async/await, no new
