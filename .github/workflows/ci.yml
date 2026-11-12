@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # The app reads its Supabase settings from a git-ignored Secrets.xcconfig.
+      # CI uses placeholders: the build and unit tests never talk to a real project.
+      # ("$()" keeps xcconfig from treating "//" as a comment.)
+      - name: Write placeholder Secrets.xcconfig
+        run: |
+          cat > BeerParty/Config/Secrets.xcconfig <<'XCCONFIG'
+          SUPABASE_URL = https:/$()/ci-placeholder.supabase.co
+          SUPABASE_ANON_KEY = ci-placeholder-anon-key
+          XCCONFIG
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '
+            [ .devices | to_entries[]
+              | select(.key | test("SimRuntime\\.iOS-"))
+              | { v: (.key | capture("iOS-(?<v>[0-9-]+)$").v | split("-") | map(tonumber)), d: .value }
+            ] | sort_by(.v) | last | .d
+            | map(select(.name | startswith("iPhone"))) | first | .udid')
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            echo "No iPhone simulator available" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project BeerParty.xcodeproj \
+            -scheme BeerParty \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -n 200
