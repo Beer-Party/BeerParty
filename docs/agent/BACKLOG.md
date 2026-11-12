@@ -11,7 +11,7 @@ project. The agent never applies them. Owner: run the file in the Supabase SQL
 editor, then tick the line.
 
 - [ ] `needs-owner`: apply `20261112110000_fix_close_expired_motions_tally.sql`
-  (S3; needs the project resumed first).
+  (S3).
 
 ## 1. Privacy and security
 

@@ -14,8 +14,11 @@ Newest first. One entry per run: date, what was done, PR, anything a human must 
 - No Swift changed. The app does not call this function today (it tallies on the
   client, see S4), so this matters once the pg_cron job at the bottom of
   `supabase_motions.sql` is enabled or S4 lands.
-- Owner action after merge: resume the Supabase project and run the migration file
-  in the SQL editor, then tick it in section 0 of `BACKLOG.md`.
+- Owner action after merge: run the migration file in the Supabase SQL editor,
+  then tick it in section 0 of `BACKLOG.md`.
+- The Supabase project is no longer paused (status active on 2026-11-12). S1 is
+  therefore unblocked: an owner can drop its `needs-owner` tag so a later run dumps
+  the schema into `supabase/migrations/`. The backlog text for S1 still says paused.
 - Noticed, not changed (belongs to S4): the function is `security definer` and
   callable by any signed-in user for any lobby, including with no lobby id.
 - First CI runs (PR #1 and the merge to main) were green, so the setup note
