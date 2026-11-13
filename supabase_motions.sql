@@ -130,16 +130,20 @@ declare
   updated_count int;
 begin
   with candidates as (
+    -- Ayes and members are counted separately: joining both in one pass
+    -- multiplies the aye count by the member count.
     select m.id,
-           count(*) filter (where mv.vote = 'aye') as aye_count,
-           greatest(count(distinct lm.user_id), 1) as member_count
+           (select count(*)
+              from public.motion_votes mv
+             where mv.motion_id = m.id
+               and mv.vote = 'aye') as aye_count,
+           greatest((select count(*)
+                       from public.lobby_members lm
+                      where lm.lobby_id = m.lobby_id), 1) as member_count
     from public.motions m
-    left join public.motion_votes mv on mv.motion_id = m.id
-    left join public.lobby_members lm on lm.lobby_id = m.lobby_id
     where m.status = 'active'
       and m.voting_closes_at <= now()
       and (p_lobby_id is null or m.lobby_id = p_lobby_id)
-    group by m.id
   )
   update public.motions m
   set status = 'closed',

@@ -4,6 +4,15 @@ Ranked. The agent takes the first unchecked item that is not `needs-owner`.
 Owners: reorder, delete or add freely. `needs-owner` means it is blocked on a
 decision or an action only an owner can take.
 
+## 0. Migrations waiting for an owner to apply
+
+Files in `supabase/migrations/` that are merged but not yet run against the live
+project. The agent never applies them. Owner: run the file in the Supabase SQL
+editor, then tick the line.
+
+- [ ] `needs-owner`: apply `20261112110000_fix_close_expired_motions_tally.sql`
+  (S3).
+
 ## 1. Privacy and security
 
 - [ ] **S1 `needs-owner`: put the database schema in the repo.** Only the motions
@@ -19,10 +28,11 @@ decision or an action only an owner can take.
   members' live locations. Fix: a `join_lobby(code, nickname)` security-definer
   function, lobby rows readable by members only, generated codes instead of
   user-chosen ones (minimum is 4 characters today).
-- [ ] **S3: `close_expired_motions` passes motions it should fail.** The query joins
+- [x] **S3: `close_expired_motions` passes motions it should fail.** The query joins
   votes and members in one pass, so the aye count is multiplied by the member count:
   one aye in a five-person lobby counts as 5/5. Fix with separate subqueries
-  (migration file only).
+  (migration file only). Done 2026-11-12 in
+  `supabase/migrations/20261112110000_fix_close_expired_motions_tally.sql`.
 - [ ] **S4 (after S1): decide motion results on the server.** Today whichever phone
   polls first computes `passed` and writes it, using a member list that can be stale,
   and the update policy lets any member write any column. Move the tally into a
