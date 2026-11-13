@@ -728,6 +728,7 @@ struct LobbyView: View {
       now = latest
       Task {
         await refreshLobbyActivityStatus()
+        await refreshMembersIfNeeded()
         await refreshMotionsIfNeeded()
         if shouldContinueLiveUpdates {
           await refreshNewDrinksIfNeeded()
@@ -1076,6 +1077,26 @@ struct LobbyView: View {
       syncLiveActivityContext()
     } catch {
       statusMessage = "Failed to load BAC tracker: \(error.localizedDescription)"
+    }
+  }
+
+  // Picks up members who joined or left since the last full load. The member list
+  // is reloaded only when the set of members has actually changed.
+  @MainActor
+  private func refreshMembersIfNeeded() async {
+    guard shouldContinueLiveUpdates else { return }
+    do {
+      let latestMemberIDs = try await backendCoordinator.fetchLobbyMemberIDs(lobbyID: lobbyID)
+      guard LobbyRoster.needsReload(
+        shownMemberIDs: members.map(\.userId),
+        latestMemberIDs: latestMemberIDs
+      ) else { return }
+
+      let roster = try await backendCoordinator.fetchLobbyRoster(lobbyID: lobbyID)
+      members = roster.members
+      bacParamsByUserId = roster.bacParamsByUserId
+    } catch {
+      // Ignore periodic refresh failures; manual refresh still reloads everything.
     }
   }
 
