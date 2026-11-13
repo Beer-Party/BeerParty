@@ -48,11 +48,12 @@ editor, then tick the line.
 
 ## 2. Bugs
 
-- [ ] **B1: token refresh probably throws the user out of the lobby.**
+- [x] **B1: token refresh probably throws the user out of the lobby.**
   `AuthViewModel.refreshProfileState` sets `profileState = .unknown` on every auth
   event, including the hourly token refresh. `RootView` swaps to a spinner, which
   tears down `PreLobbyView` and the lobby pushed on top of it. Keep `.complete`
-  while re-checking. Needs a device check.
+  while re-checking. Needs a device check. Done 2026-11-13; device check
+  still open.
 - [ ] **B2: a failed profile check sends existing users to profile setup.** Any
   error, offline included, is treated as "no profile". Distinguish "no row" from
   "request failed".
