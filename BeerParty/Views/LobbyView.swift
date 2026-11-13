@@ -81,6 +81,7 @@ struct LobbyView: View {
   @State private var currentUserShareForeground = false
   @State private var currentUserShareBackground = false
   @State private var hasCenteredMap = false
+  @State private var hasEndedLocationSharing = false
   @State private var lockScreenAccessToken: String?
   @State private var lastCustomPreset: QuickAddDrinkPreset?
   @State private var isQuickAddWidgetEnabled = false
@@ -742,7 +743,7 @@ struct LobbyView: View {
     }
     .onReceive(locationRefreshTimer) { _ in
       guard shouldContinueLiveUpdates else {
-        locationTrackingService.stopTracking()
+        endLocationSharing()
         return
       }
       Task { await refreshMemberLocations() }
@@ -759,7 +760,7 @@ struct LobbyView: View {
       clearDeleteArmTask = nil
       clearCloseArmTask?.cancel()
       clearCloseArmTask = nil
-      locationTrackingService.stopTracking()
+      endLocationSharing()
     }
   }
 
@@ -1429,11 +1430,12 @@ struct LobbyView: View {
   @MainActor
   private func refreshLocationTrackingState() {
     guard shouldContinueLiveUpdates else {
-      locationTrackingService.stopTracking()
+      endLocationSharing()
       return
     }
 
     if currentUserShareForeground {
+      hasEndedLocationSharing = false
       locationTrackingService.startTracking(allowsBackground: currentUserShareBackground)
     } else {
       locationTrackingService.stopTracking()
@@ -1442,6 +1444,25 @@ struct LobbyView: View {
           try? await backendCoordinator.clearMemberLocation(lobbyID: lobbyID, userID: currentUserID)
           await refreshMemberLocations()
         }
+      }
+    }
+  }
+
+  // Stops tracking and removes this user's stored coordinates, so the last known
+  // position is not kept once the user leaves the lobby view or the lobby's
+  // 5-hour tail ends. Safe to call repeatedly: it clears once per sharing session.
+  @MainActor
+  private func endLocationSharing() {
+    locationTrackingService.stopTracking()
+    guard !hasEndedLocationSharing, let currentUserID else { return }
+    hasEndedLocationSharing = true
+
+    Task {
+      do {
+        try await backendCoordinator.clearMemberLocation(lobbyID: lobbyID, userID: currentUserID)
+      } catch {
+        // Let the next timer tick try again while the view is still on screen.
+        hasEndedLocationSharing = false
       }
     }
   }
@@ -1467,7 +1488,7 @@ struct LobbyView: View {
 
   @MainActor
   private func handleOwnLocationUpdate(_ location: CLLocation) async {
-    guard currentUserShareForeground else { return }
+    guard currentUserShareForeground, !hasEndedLocationSharing, shouldContinueLiveUpdates else { return }
     guard let currentUserID else { return }
 
     do {
