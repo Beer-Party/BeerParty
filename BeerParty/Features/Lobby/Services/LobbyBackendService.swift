@@ -792,23 +792,30 @@ struct LobbyBackendService {
       .execute()
   }
 
+  // Removes the stored coordinates for one member. This is an UPDATE rather than an
+  // upsert so that a row deleted by leaving the lobby is not created again.
   func clearMemberLocation(
     lobbyID: UUID,
     userID: UUID,
     timestamp: Date = Date()
   ) async throws {
-    let request = UpdateMemberLocationRequest(
-      lobbyId: lobbyID,
-      userId: userID,
-      lat: nil,
-      lng: nil,
-      updatedAt: timestamp
-    )
-
     try await supabase
       .from("member_state")
-      .upsert(request, onConflict: "lobby_id,user_id")
+      .update(Self.clearedLocationValues(at: timestamp), returning: .minimal)
+      .eq("lobby_id", value: lobbyID)
+      .eq("user_id", value: userID)
       .execute()
+  }
+
+  // lat and lng have to be sent as explicit JSON nulls. An Encodable struct with
+  // optional properties leaves nil values out of the request body, and a column
+  // that is left out keeps its old value.
+  static func clearedLocationValues(at timestamp: Date) -> [String: AnyJSON] {
+    [
+      "lat": .null,
+      "lng": .null,
+      "updated_at": .string(iso8601WithFractionalSeconds.string(from: timestamp))
+    ]
   }
 
   func fetchMemberLocations(lobbyID: UUID) async throws -> [MemberLocationData] {
