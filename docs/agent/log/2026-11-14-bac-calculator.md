@@ -5,7 +5,7 @@
   `BeerParty/Features/Lobby/BACCalculator.swift`. The code was moved, not
   rewritten: same formulas, same constants, same results. `LobbyView` shrinks by
   about 150 lines and calls `BACCalculator.snapshot(...)`.
-- Added `BACCalculatorTests` (12 tests): absorption window, parameter defaults
+- Added `BACCalculatorTests` (13 tests): absorption window, parameter defaults
   and clamping, one beer after one hour checked against a hand calculation, BAC
   back to zero by morning, water, body-water effect, snapshot ranking.
 - Verified: build and tests in CI. The expected numbers in the tests were also
