@@ -59,9 +59,11 @@ editor, then tick the line.
 - [ ] **B3: people who join later do not appear.** `members` is loaded once; the
   30-second refresh only fetches drinks. New members (and their drinks) show up only
   after pull-to-refresh, and motion tallies use the stale count.
-- [ ] **B4: Lock Screen quick-add stops working after about an hour.** The access
+- [x] **B4: Lock Screen quick-add stops working after about an hour.** The access
   token is copied into the app group once when the lobby loads and never refreshed,
-  so it expires. Refresh it on the live timer and on auth events.
+  so it expires. Refresh it on the live timer and on auth events. Done 2026-11-14
+  while the lobby screen is open; a phone locked for over an hour still needs an
+  owner decision (see `docs/agent/log/2026-11-14-refresh-lockscreen-token.md`).
 - [ ] **B5: system events are stored as fake drinks.** "Made it home", "lobby
   closed" and "motion due" are rows in `drinks` with magic name prefixes; any member
   can forge them and a real drink name starting with `__home__:` vanishes. Move to a
