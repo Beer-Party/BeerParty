@@ -78,8 +78,9 @@ editor, then tick the line.
   20 seconds.
 - [ ] **Q4: stop re-simulating every member's BAC on each render.** `body` calls
   `buildBacSnapshot`, so it reruns on every keystroke in the drink form.
-- [ ] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
+- [x] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
   redeclares `QuickAddDrinkPreset`, `LobbyQuickAddContext` and the presets.
+  Done 2026-11-14.
 - [ ] **Q6: remove dead code**: `AuthOTP.swift` (magic link, unused), the
   `SwiftData` import, the `bac_etimate` legacy fallback once S1 confirms the column
   name, the unused `mapRegion` San Francisco default.

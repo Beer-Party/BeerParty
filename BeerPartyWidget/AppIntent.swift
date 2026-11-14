@@ -1,31 +1,9 @@
 import Foundation
 import AppIntents
 
-struct QuickAddDrinkPreset: Codable, Hashable {
-  let id: String
-  let name: String
-  let volumeMl: Double
-  let abv: Double
-}
-
-struct LobbyQuickAddContext: Codable {
-  let lobbyID: UUID
-  let lobbyName: String
-  let userID: UUID
-  let accessToken: String
-  let supabaseURL: String
-  let supabaseAnonKey: String
-  let lastCustomPreset: QuickAddDrinkPreset?
-  let activeMotionID: UUID?
-  let activeMotionTargetText: String?
-  let shouldShowMotionVote: Bool?
-  let updatedAt: Date
-}
-
-enum LobbyQuickAddStore {
-  static let appGroupID = "group.com.beerparty.shared"
-  static let key = "lobby.quickadd.context"
-}
+// QuickAddDrinkPreset, LobbyQuickAddContext and LobbyQuickAddStore come from
+// BeerParty/Core/Models/LockScreenQuickAdd.swift, which is a member of both the
+// app and the widget extension.
 
 @available(iOS 17.0, *)
 enum QuickAddChoice: String, AppEnum {
@@ -104,13 +82,13 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
   private func selectedPreset(from context: LobbyQuickAddContext) -> QuickAddDrinkPreset? {
     switch preset {
     case .beer:
-      return QuickAddDrinkPreset(id: "beer", name: "Beer", volumeMl: 330, abv: 5)
+      return .beer
     case .wine:
-      return QuickAddDrinkPreset(id: "wine", name: "Wine", volumeMl: 150, abv: 12)
+      return .wine
     case .shot:
-      return QuickAddDrinkPreset(id: "shot", name: "Shot", volumeMl: 44, abv: 40)
+      return .shot
     case .water:
-      return QuickAddDrinkPreset(id: "water", name: "Water", volumeMl: 250, abv: 0)
+      return .water
     case .custom:
       return context.lastCustomPreset
     }

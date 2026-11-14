@@ -3,20 +3,8 @@ import WidgetKit
 import SwiftUI
 import AppIntents
 
-@available(iOS 16.2, *)
-struct LobbyQuickAddActivityAttributes: ActivityAttributes {
-  struct ContentState: Codable, Hashable {
-    let presets: [QuickAddDrinkPreset]
-    let lastCustomPreset: QuickAddDrinkPreset?
-    let activeMotionID: String?
-    let activeMotionTargetText: String?
-    let shouldShowMotionVote: Bool?
-    let updatedAt: Date
-  }
-
-  let lobbyID: String
-  let lobbyName: String
-}
+// LobbyQuickAddActivityAttributes is shared with the app:
+// BeerParty/Core/Models/LockScreenQuickAdd.swift.
 
 struct BeerPartyWidgetLiveActivity: Widget {
   var body: some WidgetConfiguration {
