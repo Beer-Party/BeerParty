@@ -69,8 +69,9 @@ editor, then tick the line.
 
 ## 3. Code health
 
-- [ ] **Q1: move the BAC maths out of `LobbyView` into a plain type with unit
+- [x] **Q1: move the BAC maths out of `LobbyView` into a plain type with unit
   tests.** It is private view code today, and the test target has no real tests.
+  Done 2026-11-14: `BACCalculator`.
 - [ ] **Q2: split `LobbyView.swift` (1,915 lines, about 60 `@State` properties)**
   into a view model plus one view per section. Several PRs.
 - [ ] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and

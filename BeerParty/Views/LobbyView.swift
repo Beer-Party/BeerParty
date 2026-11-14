@@ -1284,7 +1284,7 @@ struct LobbyView: View {
 
     let bacGapSigned = me.bac - buddy.bac
     let bacGap = abs(bacGapSigned)
-    let parameters = bacParameters(for: bacParamsByUserId[currentUserID])
+    let parameters = BACCalculator.parameters(for: bacParamsByUserId[currentUserID])
     let alcoholGramsGap = bacGap * parameters.tbw / 0.84
     let standardBeerGap = alcoholGramsGap / standardBeerGrams
 
@@ -1732,166 +1732,14 @@ struct LobbyView: View {
 
   // Builds current BAC values and timeline points for every member.
   private func buildBacSnapshot(at timestamp: Date) -> BacSnapshot {
-    let sortedMembers = members.sorted {
-      $0.nickname.localizedCaseInsensitiveCompare($1.nickname) == .orderedAscending
-    }
-    var current: [MemberBACSnapshot] = []
-    var points: [BACPoint] = []
-    let hasAnyDrinks = !drinks.isEmpty
-
-    let allDrinkTimes = drinks.map(\.consumedAt)
-    let startTime = allDrinkTimes.min() ?? timestamp
-
-    for member in sortedMembers {
-      let memberDrinks = drinks.filter { $0.userId == member.userId }.sorted { $0.consumedAt < $1.consumedAt }
-      let params = bacParamsByUserId[member.userId]
-      let simulation = simulateBACTimeline(
-        params: params,
-        drinks: memberDrinks,
-        start: startTime,
-        end: timestamp,
-        stepMinutes: 10
-      )
-
-      current.append(
-        MemberBACSnapshot(
-          userId: member.userId,
-          nickname: member.nickname,
-          bac: simulation.currentBAC
-        )
-      )
-
-      if hasAnyDrinks {
-        points.append(contentsOf: simulation.points.map {
-          BACPoint(
-            id: "\(member.userId.uuidString)-\($0.time.timeIntervalSince1970)",
-            nickname: member.nickname,
-            time: $0.time,
-            bac: $0.bac
-          )
-        })
-      }
-    }
-
-    let maxY = max(0.05, points.map(\.bac).max() ?? 0.05)
-    let sortedCurrent = current.sorted { lhs, rhs in
-      if lhs.bac == rhs.bac {
-        return lhs.nickname.localizedCaseInsensitiveCompare(rhs.nickname) == .orderedAscending
-      }
-      return lhs.bac > rhs.bac
-    }
-    return BacSnapshot(current: sortedCurrent, points: points, maxY: maxY)
-  }
-
-  // Simulates BAC over time using absorption and elimination at fixed time steps.
-  private func simulateBACTimeline(
-    params: LobbyBACParamsData?,
-    drinks: [LobbyDrink],
-    start: Date,
-    end: Date,
-    stepMinutes: Int
-  ) -> BACSimulationResult {
-    guard end >= start else {
-      return BACSimulationResult(points: [TimelineBACPoint(time: end, bac: 0)], currentBAC: 0)
-    }
-
-    let parameters = bacParameters(for: params)
-    let eliminationPerHourGrams = (parameters.eliminationPerHourPromille * parameters.tbw) / 0.84
-    let sortedDrinks = drinks.sorted { $0.consumedAt < $1.consumedAt }
-    let stepSeconds = TimeInterval(stepMinutes * 60)
-
-    var points: [TimelineBACPoint] = []
-    var currentTime = start
-    var alcoholInBodyGrams: Double = 0
-
-    points.append(TimelineBACPoint(time: currentTime, bac: 0))
-
-    while currentTime < end {
-      let nextTime = min(end, currentTime.addingTimeInterval(stepSeconds))
-      let dtHours = nextTime.timeIntervalSince(currentTime) / 3600
-      if dtHours <= 0 {
-        currentTime = nextTime
-        continue
-      }
-
-      var absorbedGrams: Double = 0
-      for drink in sortedDrinks {
-        let previousHours = currentTime.timeIntervalSince(drink.consumedAt) / 3600
-        let currentHours = nextTime.timeIntervalSince(drink.consumedAt) / 3600
-        let previousFraction = absorbedFraction(hoursSinceDrink: previousHours, abv: drink.abv)
-        let currentFraction = absorbedFraction(hoursSinceDrink: currentHours, abv: drink.abv)
-        let deltaFraction = max(0, currentFraction - previousFraction)
-        absorbedGrams += drink.alcoholGrams * deltaFraction
-      }
-
-      alcoholInBodyGrams = max(
-        0,
-        alcoholInBodyGrams + absorbedGrams - eliminationPerHourGrams * dtHours
-      )
-
-      let currentBAC = max(0, (alcoholInBodyGrams / parameters.tbw) * 0.84)
-      points.append(TimelineBACPoint(time: nextTime, bac: currentBAC))
-
-      currentTime = nextTime
-    }
-
-    return BACSimulationResult(points: points, currentBAC: points.last?.bac ?? 0)
-  }
-
-  // Uses precomputed per-member BAC parameters to avoid reading raw profiles.
-  private func bacParameters(for params: LobbyBACParamsData?) -> BACParameters {
-    guard let params else {
-      return BACParameters(tbw: 40, eliminationPerHourPromille: 0.14)
-    }
-    return BACParameters(
-      tbw: max(20, params.tbw),
-      eliminationPerHourPromille: max(0.08, min(0.2, params.eliminationPerHourPromille))
+    BACCalculator.snapshot(
+      members: members,
+      drinks: drinks,
+      paramsByUserId: bacParamsByUserId,
+      at: timestamp
     )
   }
 
-  // Returns what fraction of a drink is absorbed based on elapsed time and ABV.
-  private func absorbedFraction(hoursSinceDrink: Double, abv: Double) -> Double {
-    guard hoursSinceDrink > 0 else { return 0 }
-    let absorptionDurationHours = min(max(1.6 - (abv * 0.03), 0.25), 1.6)
-    return min(1, hoursSinceDrink / absorptionDurationHours)
-  }
-
-}
-
-private struct BACParameters {
-  let tbw: Double
-  let eliminationPerHourPromille: Double
-}
-
-private struct TimelineBACPoint {
-  let time: Date
-  let bac: Double
-}
-
-private struct BACSimulationResult {
-  let points: [TimelineBACPoint]
-  let currentBAC: Double
-}
-
-private struct MemberBACSnapshot: Identifiable {
-  let userId: UUID
-  let nickname: String
-  let bac: Double
-
-  var id: UUID { userId }
-}
-
-private struct BACPoint: Identifiable {
-  let id: String
-  let nickname: String
-  let time: Date
-  let bac: Double
-}
-
-private struct BacSnapshot {
-  let current: [MemberBACSnapshot]
-  let points: [BACPoint]
-  let maxY: Double
 }
 
 private struct BacGraphDisplayData {
