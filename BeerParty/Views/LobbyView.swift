@@ -678,6 +678,15 @@ struct LobbyView: View {
     .refreshable {
       await loadLobbyAnalytics()
     }
+    .task {
+      // Auth events include the hourly token refresh.
+      for await token in backendCoordinator.accessTokenUpdates() {
+        applyLockScreenAccessToken(token)
+      }
+    }
+    .onReceive(liveTimer) { _ in
+      Task { await refreshLockScreenAccessToken() }
+    }
     .sheet(item: $editingDrink) { drink in
       NavigationStack {
         Form {
@@ -1577,6 +1586,26 @@ struct LobbyView: View {
       activeMotionTargetText: pendingMotion?.targetText,
       shouldShowMotionVote: shouldShowPendingVote
     )
+  }
+
+  // The access token lasts about an hour. The Lock Screen buttons use the copy
+  // stored in the app group, so that copy is replaced whenever the token changes.
+  @MainActor
+  private func applyLockScreenAccessToken(_ freshToken: String?) {
+    guard let token = LockScreenTokenRefresh.replacement(
+      stored: lockScreenAccessToken,
+      fresh: freshToken
+    ) else { return }
+    lockScreenAccessToken = token
+    syncLiveActivityContext()
+  }
+
+  // Asking for the session also renews a token that is about to expire.
+  @MainActor
+  private func refreshLockScreenAccessToken() async {
+    guard isQuickAddWidgetEnabled, isLobbyActive else { return }
+    let authContext = try? await backendCoordinator.currentSessionAuthContext()
+    applyLockScreenAccessToken(authContext?.accessToken)
   }
 
   @MainActor
