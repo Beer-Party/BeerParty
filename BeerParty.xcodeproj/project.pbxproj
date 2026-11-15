@@ -71,6 +71,13 @@
 			);
 			target = 9E1559052F3A36CD00E02344 /* BeerParty */;
 		};
+		9EA6E5012F6A000000C0FFEE /* Exceptions for "BeerParty" folder in "BeerPartyWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/Models/LockScreenQuickAdd.swift,
+			);
+			target = 9E778C3F2F41C8E00073F7D7 /* BeerPartyWidgetExtension */;
+		};
 		9E778C592F41C8E20073F7D7 /* Exceptions for "BeerPartyWidget" folder in "BeerPartyWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -85,6 +92,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				9E15594A2F3B6B5900E02344 /* Exceptions for "BeerParty" folder in "BeerParty" target */,
+				9EA6E5012F6A000000C0FFEE /* Exceptions for "BeerParty" folder in "BeerPartyWidgetExtension" target */,
 			);
 			path = BeerParty;
 			sourceTree = "<group>";
