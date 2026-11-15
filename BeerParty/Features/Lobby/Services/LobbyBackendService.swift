@@ -65,6 +65,16 @@ struct LobbyAnalyticsPayload {
   let bacParamsByUserId: [UUID: LobbyBACParamsData]
 }
 
+struct LobbyRoster {
+  let members: [LobbyMemberData]
+  let bacParamsByUserId: [UUID: LobbyBACParamsData]
+
+  // True when the member list on screen no longer matches the lobby.
+  static func needsReload(shownMemberIDs: [UUID], latestMemberIDs: [UUID]) -> Bool {
+    Set(shownMemberIDs) != Set(latestMemberIDs)
+  }
+}
+
 struct LobbyMemberData: Identifiable {
   let userId: UUID
   let nickname: String
@@ -679,6 +689,30 @@ struct LobbyBackendService {
     let session = try await supabase.auth.session
     try? await ensureCurrentUserBACParams(lobbyID: lobbyID, userID: session.user.id)
 
+    let roster = try await fetchLobbyRoster(lobbyID: lobbyID)
+
+    let drinkRows: [DrinkRow] = try await supabase
+      .from("drinks")
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
+      .eq("lobby_id", value: lobbyID)
+      .order("consumed_at", ascending: true)
+      .execute()
+      .value
+
+    let drinks = drinkRows.compactMap { row -> LobbyDrink? in
+      drink(from: row)
+    }
+
+    return LobbyAnalyticsPayload(
+      currentUserID: session.user.id,
+      members: roster.members,
+      drinks: drinks,
+      bacParamsByUserId: roster.bacParamsByUserId
+    )
+  }
+
+  // Loads the lobby's members and their BAC parameters, without drinks.
+  func fetchLobbyRoster(lobbyID: UUID) async throws -> LobbyRoster {
     let memberRows: [LobbyMemberRow] = try await supabase
       .from("lobby_members")
       .select("user_id,nickname")
@@ -712,18 +746,6 @@ struct LobbyBackendService {
       )
     }
 
-    let drinkRows: [DrinkRow] = try await supabase
-      .from("drinks")
-      .select("id,user_id,name,volume_ml,abv,consumed_at")
-      .eq("lobby_id", value: lobbyID)
-      .order("consumed_at", ascending: true)
-      .execute()
-      .value
-
-    let drinks = drinkRows.compactMap { row -> LobbyDrink? in
-      drink(from: row)
-    }
-
     var bacParamsByUserId: [UUID: LobbyBACParamsData] = [:]
     do {
       let bacParamsRows: [LobbyBACParamsRow] = try await supabase
@@ -745,12 +767,19 @@ struct LobbyBackendService {
       // Allow tracker to continue with fallback parameters if this table/policy is not ready yet.
     }
 
-    return LobbyAnalyticsPayload(
-      currentUserID: session.user.id,
-      members: members,
-      drinks: drinks,
-      bacParamsByUserId: bacParamsByUserId
-    )
+    return LobbyRoster(members: members, bacParamsByUserId: bacParamsByUserId)
+  }
+
+  // One cheap request for the live refresh to notice members joining or leaving.
+  func fetchLobbyMemberIDs(lobbyID: UUID) async throws -> [UUID] {
+    let memberRows: [LobbyMemberRow] = try await supabase
+      .from("lobby_members")
+      .select("user_id,nickname")
+      .eq("lobby_id", value: lobbyID)
+      .execute()
+      .value
+
+    return memberRows.map(\.userId)
   }
 
   func fetchLocationSharingSettings(userID: UUID) async -> LocationSharingSettings {

@@ -19,6 +19,14 @@ struct LobbyViewBackendCoordinator {
     try await backendService.fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
   }
 
+  func fetchLobbyMemberIDs(lobbyID: UUID) async throws -> [UUID] {
+    try await backendService.fetchLobbyMemberIDs(lobbyID: lobbyID)
+  }
+
+  func fetchLobbyRoster(lobbyID: UUID) async throws -> LobbyRoster {
+    try await backendService.fetchLobbyRoster(lobbyID: lobbyID)
+  }
+
   func fetchNewDrinks(lobbyID: UUID, after timestamp: Date) async throws -> [LobbyDrink] {
     try await backendService.fetchNewDrinks(lobbyID: lobbyID, after: timestamp)
   }
