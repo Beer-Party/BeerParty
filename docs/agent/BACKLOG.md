@@ -98,8 +98,8 @@ editor, then tick the line.
 - [ ] **Q6: remove dead code**: `AuthOTP.swift` (magic link, unused), the
   `SwiftData` import, the `bac_etimate` legacy fallback once S1 confirms the column
   name, the unused `mapRegion` San Francisco default.
-- [ ] **Q7: repo hygiene**: untrack `xcuserdata`, fuller `.gitignore`, a README
-  with setup steps (`Secrets.xcconfig`, Supabase).
+- [x] **Q7: repo hygiene**: untrack `xcuserdata`, fuller `.gitignore`, a README
+  with setup steps (`Secrets.xcconfig`, Supabase). Done 2026-11-15.
 - [ ] **Q8: replace polling with Supabase Realtime** for drinks, motions and
   locations (after S1).
 
