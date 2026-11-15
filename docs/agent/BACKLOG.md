@@ -72,6 +72,13 @@ editor, then tick the line.
   closed" and "motion due" are rows in `drinks` with magic name prefixes; any member
   can forge them and a real drink name starting with `__home__:` vanishes. Move to a
   `lobby_events` table (migration + client, split over several PRs).
+  - [x] Step 1, 2026-11-15: the table and its rules, as
+    `supabase/migrations/20261115110000_create_lobby_events.sql`.
+  - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor.
+  - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
+    reads the old prefixed rows so phones on the old version keep working.
+  - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
+    delete them (migration).
 
 ## 3. Code health
 
