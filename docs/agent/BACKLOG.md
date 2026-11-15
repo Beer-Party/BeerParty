@@ -12,6 +12,9 @@ editor, then tick the line.
 
 - [ ] `needs-owner`: apply `20261112110000_fix_close_expired_motions_tally.sql`
   (S3).
+- [ ] `needs-owner`: apply `20261113110000_clear_stale_member_locations.sql` (S5),
+  then run the optional pg_cron block at the bottom of that file once so the expiry
+  runs on a schedule.
 
 ## 1. Privacy and security
 
@@ -37,10 +40,12 @@ editor, then tick the line.
   polls first computes `passed` and writes it, using a member list that can be stale,
   and the update policy lets any member write any column. Move the tally into a
   function and narrow the policy.
-- [ ] **S5: stop keeping last-known locations.** `member_state.lat/lng` is cleared
+- [x] **S5: stop keeping last-known locations.** `member_state.lat/lng` is cleared
   only when the user turns sharing off. Leaving the lobby view, the lobby closing or
   the 5-hour tail ending all leave the last coordinates in the table. Clear on those
-  events in the client, and add a server-side expiry migration.
+  events in the client, and add a server-side expiry migration. Done 2026-11-13
+  (client clear plus
+  `supabase/migrations/20261113110000_clear_stale_member_locations.sql`).
 - [ ] **S6 `needs-owner` (after S1): check that other members cannot read
   `profiles.weight`, `age`, `gender`.** The client reads other members'
   `profile_pic_path` from `profiles`, so the select policy allows cross-user reads
