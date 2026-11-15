@@ -67,10 +67,6 @@ struct LobbyView: View {
   @State private var isCloseArmed: Bool = false
   @State private var clearDeleteArmTask: Task<Void, Never>?
   @State private var clearCloseArmTask: Task<Void, Never>?
-  @State private var mapRegion = MKCoordinateRegion(
-    center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-    span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
-  )
   @State private var mapPosition: MapCameraPosition = .region(
     MKCoordinateRegion(
       center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
@@ -1491,8 +1487,12 @@ struct LobbyView: View {
       locationRows = rows
 
       if !hasCenteredMap, let first = rows.first {
-        mapRegion.center = CLLocationCoordinate2D(latitude: first.lat, longitude: first.lng)
-        mapPosition = .region(mapRegion)
+        mapPosition = .region(
+          MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: first.lat, longitude: first.lng),
+            span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
+          )
+        )
         hasCenteredMap = true
       }
     } catch {
