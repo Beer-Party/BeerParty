@@ -1,3 +1,25 @@
 # Local secrets
 BeerParty/Config/Secrets.xcconfig
 .env
+.env.*
+
+# macOS
+.DS_Store
+
+# Xcode: per-user state and build output
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcresult
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager (Package.resolved stays tracked)
+.build/
+.swiftpm/
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
