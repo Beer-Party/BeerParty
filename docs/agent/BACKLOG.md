@@ -111,7 +111,7 @@ editor, then tick the line.
   the network layer.
 - [ ] **U3: map**: frame all visible members, add a re-centre button; today it
   centres once on the first row returned.
-- [ ] **U4: fix login copy** ("individuals inebreation").
+- [x] **U4: fix login copy** ("individuals inebreation"). Done 2026-11-16.
 - [ ] **U5 `needs-owner`: Sign in with Apple.** Google is the only sign-in; App
   Store review generally expects an equivalent option alongside third-party login.
 - [ ] **U6 `needs-owner`: deployment target is iOS 26.2**, so only phones on the
