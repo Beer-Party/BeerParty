@@ -2,6 +2,8 @@
 
 Newest first. One entry per run: date, what was done, PR, anything a human must do.
 
+Entries from 2026-11-13 on live in `log/`, one file per PR. This file is history.
+
 ## 2026-11-12: S3, expired-motion tally
 
 - Fixed `close_expired_motions`: ayes and members are now counted in separate
