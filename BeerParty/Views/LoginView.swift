@@ -65,7 +65,7 @@ struct LoginView: View {
           VStack(alignment: .leading, spacing: 10) {
             Toggle("I confirm I am at least 18 years old.", isOn: $isAtLeast18)
 
-            Text("This app does not provide medically accurate information regarding an individuals inebreation.")
+            Text("This app does not provide medically accurate information about how intoxicated you are.")
               .font(.footnote)
               .foregroundStyle(.secondary)
 
