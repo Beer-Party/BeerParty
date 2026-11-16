@@ -16,6 +16,8 @@ final class AuthViewModel: ObservableObject {
   @Published var userId: UUID?
   @Published var profileState: ProfileState = .unknown
   private var authListenerTask: Task<Void, Never>?
+  /// The user whose profile row has been confirmed to exist in this session.
+  private var verifiedProfileUserId: UUID?
 
   init() {
     Task {
@@ -58,16 +60,23 @@ final class AuthViewModel: ObservableObject {
       self.isSignedIn = false
       self.userId = nil
       self.profileState = .unknown
+      self.verifiedProfileUserId = nil
     }
   }
 
   func refreshProfileState() async {
     guard let userId = userId else {
       profileState = .unknown
+      verifiedProfileUserId = nil
       return
     }
 
-    profileState = .unknown
+    // Auth events fire for the whole session, including the hourly token refresh.
+    // Once this user's profile is known to exist, keep showing the app while it is
+    // re-checked: going back to .unknown makes RootView swap to a spinner, which
+    // tears down the lobby the user is in.
+    let wasVerified = verifiedProfileUserId == userId
+    profileState = ProfileState.whileChecking(current: profileState, alreadyVerified: wasVerified)
 
     do {
       let _: UserProfileLite = try await supabase
@@ -77,9 +86,14 @@ final class AuthViewModel: ObservableObject {
         .single()
         .execute()
         .value
+      verifiedProfileUserId = userId
       profileState = .complete
     } catch {
-      profileState = .needsProfile
+      // A failed re-check (offline, timeout) must not send a user whose profile was
+      // already confirmed back to profile setup.
+      if !wasVerified {
+        profileState = .needsProfile
+      }
     }
   }
 }
@@ -88,6 +102,12 @@ enum ProfileState: Equatable {
   case unknown
   case needsProfile
   case complete
+
+  /// The state to show while the profile is being checked. A profile that was
+  /// already confirmed for this user stays as it is; anything else shows the spinner.
+  static func whileChecking(current: ProfileState, alreadyVerified: Bool) -> ProfileState {
+    alreadyVerified && current == .complete ? .complete : .unknown
+  }
 }
 
 private struct UserProfileLite: Decodable {

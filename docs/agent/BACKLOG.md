@@ -12,6 +12,9 @@ editor, then tick the line.
 
 - [ ] `needs-owner`: apply `20261112110000_fix_close_expired_motions_tally.sql`
   (S3).
+- [ ] `needs-owner`: apply `20261113110000_clear_stale_member_locations.sql` (S5),
+  then run the optional pg_cron block at the bottom of that file once so the expiry
+  runs on a schedule.
 
 ## 1. Privacy and security
 
@@ -37,10 +40,12 @@ editor, then tick the line.
   polls first computes `passed` and writes it, using a member list that can be stale,
   and the update policy lets any member write any column. Move the tally into a
   function and narrow the policy.
-- [ ] **S5: stop keeping last-known locations.** `member_state.lat/lng` is cleared
+- [x] **S5: stop keeping last-known locations.** `member_state.lat/lng` is cleared
   only when the user turns sharing off. Leaving the lobby view, the lobby closing or
   the 5-hour tail ending all leave the last coordinates in the table. Clear on those
-  events in the client, and add a server-side expiry migration.
+  events in the client, and add a server-side expiry migration. Done 2026-11-13
+  (client clear plus
+  `supabase/migrations/20261113110000_clear_stale_member_locations.sql`).
 - [ ] **S6 `needs-owner` (after S1): check that other members cannot read
   `profiles.weight`, `age`, `gender`.** The client reads other members'
   `profile_pic_path` from `profiles`, so the select policy allows cross-user reads
@@ -48,17 +53,18 @@ editor, then tick the line.
 
 ## 2. Bugs
 
-- [ ] **B1: token refresh probably throws the user out of the lobby.**
+- [x] **B1: token refresh probably throws the user out of the lobby.**
   `AuthViewModel.refreshProfileState` sets `profileState = .unknown` on every auth
   event, including the hourly token refresh. `RootView` swaps to a spinner, which
   tears down `PreLobbyView` and the lobby pushed on top of it. Keep `.complete`
-  while re-checking. Needs a device check.
+  while re-checking. Needs a device check. Done 2026-11-13; device check
+  still open.
 - [ ] **B2: a failed profile check sends existing users to profile setup.** Any
   error, offline included, is treated as "no profile". Distinguish "no row" from
   "request failed".
-- [ ] **B3: people who join later do not appear.** `members` is loaded once; the
+- [x] **B3: people who join later do not appear.** `members` is loaded once; the
   30-second refresh only fetches drinks. New members (and their drinks) show up only
-  after pull-to-refresh, and motion tallies use the stale count.
+  after pull-to-refresh, and motion tallies use the stale count. Done 2026-11-13.
 - [x] **B4: Lock Screen quick-add stops working after about an hour.** The access
   token is copied into the app group once when the lobby loads and never refreshed,
   so it expires. Refresh it on the live timer and on auth events. Done 2026-11-14
@@ -68,11 +74,19 @@ editor, then tick the line.
   closed" and "motion due" are rows in `drinks` with magic name prefixes; any member
   can forge them and a real drink name starting with `__home__:` vanishes. Move to a
   `lobby_events` table (migration + client, split over several PRs).
+  - [x] Step 1, 2026-11-15: the table and its rules, as
+    `supabase/migrations/20261115110000_create_lobby_events.sql`.
+  - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor.
+  - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
+    reads the old prefixed rows so phones on the old version keep working.
+  - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
+    delete them (migration).
 
 ## 3. Code health
 
-- [ ] **Q1: move the BAC maths out of `LobbyView` into a plain type with unit
+- [x] **Q1: move the BAC maths out of `LobbyView` into a plain type with unit
   tests.** It is private view code today, and the test target has no real tests.
+  Done 2026-11-14: `BACCalculator`.
 - [ ] **Q2: split `LobbyView.swift` (1,915 lines, about 60 `@State` properties)**
   into a view model plus one view per section. Several PRs.
 - [ ] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
@@ -80,13 +94,14 @@ editor, then tick the line.
   20 seconds.
 - [ ] **Q4: stop re-simulating every member's BAC on each render.** `body` calls
   `buildBacSnapshot`, so it reruns on every keystroke in the drink form.
-- [ ] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
+- [x] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
   redeclares `QuickAddDrinkPreset`, `LobbyQuickAddContext` and the presets.
+  Done 2026-11-14.
 - [ ] **Q6: remove dead code**: `AuthOTP.swift` (magic link, unused), the
   `SwiftData` import, the `bac_etimate` legacy fallback once S1 confirms the column
   name, the unused `mapRegion` San Francisco default.
-- [ ] **Q7: repo hygiene**: untrack `xcuserdata`, fuller `.gitignore`, a README
-  with setup steps (`Secrets.xcconfig`, Supabase).
+- [x] **Q7: repo hygiene**: untrack `xcuserdata`, fuller `.gitignore`, a README
+  with setup steps (`Secrets.xcconfig`, Supabase). Done 2026-11-15.
 - [ ] **Q8: replace polling with Supabase Realtime** for drinks, motions and
   locations (after S1).
 
