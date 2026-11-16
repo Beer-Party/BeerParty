@@ -95,9 +95,11 @@ editor, then tick the line.
 - [x] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
   redeclares `QuickAddDrinkPreset`, `LobbyQuickAddContext` and the presets.
   Done 2026-11-14.
-- [ ] **Q6: remove dead code**: `AuthOTP.swift` (magic link, unused), the
-  `SwiftData` import, the `bac_etimate` legacy fallback once S1 confirms the column
-  name, the unused `mapRegion` San Francisco default.
+- [x] **Q6: remove dead code**: `AuthOTP.swift` (magic link, unused), the
+  `SwiftData` import, the unused `mapRegion` San Francisco default. Done
+  2026-11-15.
+- [ ] **Q6b (after S1): remove the `bac_etimate` legacy fallback** once S1 confirms
+  the column name. Split out of Q6.
 - [x] **Q7: repo hygiene**: untrack `xcuserdata`, fuller `.gitignore`, a README
   with setup steps (`Secrets.xcconfig`, Supabase). Done 2026-11-15.
 - [ ] **Q8: replace polling with Supabase Realtime** for drinks, motions and
