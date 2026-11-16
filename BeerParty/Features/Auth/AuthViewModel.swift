@@ -78,35 +78,77 @@ final class AuthViewModel: ObservableObject {
     let wasVerified = verifiedProfileUserId == userId
     profileState = ProfileState.whileChecking(current: profileState, alreadyVerified: wasVerified)
 
+    let result: ProfileCheckResult
     do {
-      let _: UserProfileLite = try await supabase
+      // A plain list, not .single(): .single() throws when there is no row, which
+      // cannot be told apart from a request that failed.
+      let rows: [UserProfileLite] = try await supabase
         .from("profiles")
         .select("id")
         .eq("id", value: userId)
-        .single()
+        .limit(1)
         .execute()
         .value
-      verifiedProfileUserId = userId
-      profileState = .complete
+      result = rows.isEmpty ? .missing : .found
     } catch {
-      // A failed re-check (offline, timeout) must not send a user whose profile was
-      // already confirmed back to profile setup.
-      if !wasVerified {
-        profileState = .needsProfile
-      }
+      result = .failed
     }
+
+    // The user may have signed out or changed while the request was running.
+    guard self.userId == userId else { return }
+
+    switch result {
+    case .found:
+      verifiedProfileUserId = userId
+    case .missing:
+      verifiedProfileUserId = nil
+    case .failed:
+      break
+    }
+    // Asked again here, not taken from before the request: another check for the
+    // same user may have confirmed the profile in the meantime.
+    profileState = ProfileState.afterCheck(
+      result,
+      alreadyVerified: verifiedProfileUserId == userId
+    )
   }
+}
+
+/// What the profile lookup returned.
+enum ProfileCheckResult: Equatable {
+  /// The user has a profile row.
+  case found
+  /// The request worked and there is no row: a new user.
+  case missing
+  /// The request itself failed (offline, timeout, server error).
+  case failed
 }
 
 enum ProfileState: Equatable {
   case unknown
   case needsProfile
   case complete
+  /// The profile could not be checked. Shown with a retry, not as profile setup.
+  case checkFailed
 
   /// The state to show while the profile is being checked. A profile that was
   /// already confirmed for this user stays as it is; anything else shows the spinner.
   static func whileChecking(current: ProfileState, alreadyVerified: Bool) -> ProfileState {
     alreadyVerified && current == .complete ? .complete : .unknown
+  }
+
+  /// The state to show once the check has finished. Only a request that worked and
+  /// found no row sends the user to profile setup. A failed request keeps a profile
+  /// that was already confirmed, and otherwise offers a retry.
+  static func afterCheck(_ result: ProfileCheckResult, alreadyVerified: Bool) -> ProfileState {
+    switch result {
+    case .found:
+      return .complete
+    case .missing:
+      return .needsProfile
+    case .failed:
+      return alreadyVerified ? .complete : .checkFailed
+    }
   }
 }
 
