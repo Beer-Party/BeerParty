@@ -59,9 +59,9 @@ editor, then tick the line.
   tears down `PreLobbyView` and the lobby pushed on top of it. Keep `.complete`
   while re-checking. Needs a device check. Done 2026-11-13; device check
   still open.
-- [ ] **B2: a failed profile check sends existing users to profile setup.** Any
+- [x] **B2: a failed profile check sends existing users to profile setup.** Any
   error, offline included, is treated as "no profile". Distinguish "no row" from
-  "request failed".
+  "request failed". Done 2026-11-16; device check still open.
 - [x] **B3: people who join later do not appear.** `members` is loaded once; the
   30-second refresh only fetches drinks. New members (and their drinks) show up only
   after pull-to-refresh, and motion tallies use the stale count. Done 2026-11-13.

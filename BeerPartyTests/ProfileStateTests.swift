@@ -16,4 +16,28 @@ final class ProfileStateTests: XCTestCase {
     // .complete left over from a different user is not trusted.
     XCTAssertEqual(ProfileState.whileChecking(current: .complete, alreadyVerified: false), .unknown)
   }
+
+  // B2: only "the request worked and there is no row" means a new user.
+  func testMissingRowSendsUserToProfileSetup() {
+    XCTAssertEqual(ProfileState.afterCheck(.missing, alreadyVerified: false), .needsProfile)
+    XCTAssertEqual(ProfileState.afterCheck(.missing, alreadyVerified: true), .needsProfile)
+  }
+
+  func testFoundRowIsComplete() {
+    XCTAssertEqual(ProfileState.afterCheck(.found, alreadyVerified: false), .complete)
+    XCTAssertEqual(ProfileState.afterCheck(.found, alreadyVerified: true), .complete)
+  }
+
+  // Offline at launch used to land an existing user on profile setup.
+  func testFailedCheckOffersRetryInsteadOfProfileSetup() {
+    XCTAssertEqual(ProfileState.afterCheck(.failed, alreadyVerified: false), .checkFailed)
+  }
+
+  func testFailedRecheckKeepsConfirmedProfile() {
+    XCTAssertEqual(ProfileState.afterCheck(.failed, alreadyVerified: true), .complete)
+  }
+
+  func testRetryAfterFailedCheckShowsSpinner() {
+    XCTAssertEqual(ProfileState.whileChecking(current: .checkFailed, alreadyVerified: false), .unknown)
+  }
 }
