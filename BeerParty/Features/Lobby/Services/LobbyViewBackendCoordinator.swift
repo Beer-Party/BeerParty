@@ -9,6 +9,21 @@ struct LobbyViewBackendCoordinator {
     return (session.user.id, session.accessToken)
   }
 
+  /// Access tokens as the auth client issues them: at sign-in and on every refresh.
+  func accessTokenUpdates() -> AsyncStream<String> {
+    AsyncStream { continuation in
+      let task = Task {
+        for await (_, session) in supabase.auth.authStateChanges {
+          if let token = session?.accessToken {
+            continuation.yield(token)
+          }
+        }
+        continuation.finish()
+      }
+      continuation.onTermination = { _ in task.cancel() }
+    }
+  }
+
   func loadLobbyAnalytics(lobbyID: UUID) async throws -> (LobbyMeta, LobbyAnalyticsPayload) {
     async let meta = backendService.fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
     async let payload = backendService.fetchLobbyAnalytics(lobbyID: lobbyID)
