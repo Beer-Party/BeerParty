@@ -722,19 +722,7 @@ struct LobbyBackendService {
 
     let memberIDs = memberRows.map(\.userId)
 
-    var profilePicByUserID: [UUID: String] = [:]
-    for memberID in memberIDs {
-      if let profileRow: ProfilePhotoRow = try? await supabase
-        .from("profiles")
-        .select("id,profile_pic_path")
-        .eq("id", value: memberID)
-        .single()
-        .execute()
-        .value
-      {
-        profilePicByUserID[memberID] = profileRow.profilePicPath
-      }
-    }
+    let profilePicByUserID = await fetchProfilePicPaths(userIDs: memberIDs)
 
     let members = memberRows.map {
       let cleanedNickname = ($0.nickname ?? "")
@@ -862,19 +850,7 @@ struct LobbyBackendService {
       .execute()
       .value
 
-    var profilePicByUserID: [UUID: String] = [:]
-    for member in memberRows {
-      if let profileRow: ProfilePhotoRow = try? await supabase
-        .from("profiles")
-        .select("id,profile_pic_path")
-        .eq("id", value: member.userId)
-        .single()
-        .execute()
-        .value
-      {
-        profilePicByUserID[member.userId] = profileRow.profilePicPath
-      }
-    }
+    let profilePicByUserID = await fetchProfilePicPaths(userIDs: memberRows.map(\.userId))
 
     let nicknameByUserID = Dictionary(
       uniqueKeysWithValues: memberRows.map { row in
@@ -896,6 +872,19 @@ struct LobbyBackendService {
         profilePicPath: profilePicByUserID[row.userId]
       )
     }
+  }
+
+  // Avatar paths for a set of users in one request (it used to be one request per
+  // member). A failed request means no avatars, as before; the lobby still loads.
+  private func fetchProfilePicPaths(userIDs: [UUID]) async -> [UUID: String] {
+    guard !userIDs.isEmpty else { return [:] }
+    let rows: [ProfilePhotoRow]? = try? await supabase
+      .from("profiles")
+      .select("id,profile_pic_path")
+      .in("id", values: userIDs)
+      .execute()
+      .value
+    return ProfilePhotoRow.pathsByUserID(rows ?? [])
   }
 
   // Fetches only drinks newer than the provided timestamp for cheap live updates.
@@ -1108,13 +1097,24 @@ private struct LobbyMemberRow: Decodable {
   }
 }
 
-private struct ProfilePhotoRow: Decodable {
+struct ProfilePhotoRow: Decodable {
   let id: UUID
   let profilePicPath: String?
 
   enum CodingKeys: String, CodingKey {
     case id
     case profilePicPath = "profile_pic_path"
+  }
+
+  // Users without a picture get no entry.
+  static func pathsByUserID(_ rows: [ProfilePhotoRow]) -> [UUID: String] {
+    var paths: [UUID: String] = [:]
+    for row in rows {
+      if let path = row.profilePicPath {
+        paths[row.id] = path
+      }
+    }
+    return paths
   }
 }
 
