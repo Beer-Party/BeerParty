@@ -109,7 +109,7 @@ editor, then tick the line.
 
 ## 4. UX
 
-- [ ] **U1: lobby header**: drop the raw lobby UUID, add a share button for the
+- [x] **U1: lobby header**: drop the raw lobby UUID, add a share button for the
   invite code.
 - [ ] **U2: friendlier errors.** Status lines show raw `localizedDescription` from
   the network layer.
