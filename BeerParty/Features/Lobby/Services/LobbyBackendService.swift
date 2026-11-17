@@ -75,7 +75,7 @@ struct LobbyRoster {
   }
 }
 
-struct LobbyMemberData: Identifiable {
+struct LobbyMemberData: Identifiable, Equatable {
   let userId: UUID
   let nickname: String
   let profilePicPath: String?
@@ -99,7 +99,7 @@ struct LocationSharingSettings {
   let shareBackground: Bool
 }
 
-struct LobbyDrink: Identifiable {
+struct LobbyDrink: Identifiable, Equatable {
   let id: UUID
   let userId: UUID
   let name: String
@@ -112,7 +112,7 @@ struct LobbyDrink: Identifiable {
   }
 }
 
-struct LobbyBACParamsData {
+struct LobbyBACParamsData: Equatable {
   let userId: UUID
   let tbw: Double
   let eliminationPerHourPromille: Double
