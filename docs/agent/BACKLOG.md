@@ -50,6 +50,13 @@ editor, then tick the line.
   `profiles.weight`, `age`, `gender`.** The client reads other members'
   `profile_pic_path` from `profiles`, so the select policy allows cross-user reads
   of at least that table.
+- [ ] **S7 `needs-owner` (after S1): there is no way to delete an account.** The
+  app creates accounts (Google sign-in plus a profile with weight, age, gender and
+  a photo) but only offers "Sign out". App Store review guideline 5.1.1(v) expects
+  in-app account deletion, and users cannot remove their data themselves. Needs an
+  owner decision on what is deleted (profile, photo, drinks, memberships, lobbies
+  the user created) and a server-side function, since the app cannot delete an
+  auth user with the anon key. Found 2026-11-17.
 
 ## 2. Bugs
 
@@ -81,6 +88,31 @@ editor, then tick the line.
     reads the old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
     delete them (migration).
+- [ ] **B6: a decimal comma is rejected.** `LobbyView` parses volume and ABV with
+  `Double(text)` (add form and edit sheet), and `ProfileSetupView` does the same
+  for weight. The decimal keypad shows a comma in most European regions, and
+  `Double("4,7")` is nil, so "Add Drink" and "Save" stay disabled with no
+  explanation. Parse both separators in one shared helper, with unit tests. Found
+  2026-11-17.
+- [ ] **B7: other members' edited and deleted drinks never arrive, and some new
+  ones are missed.** The 30-second refresh asks only for drinks with `consumed_at`
+  later than the newest one already shown (`fetchNewDrinks`). An edit or a delete
+  changes no such row, so every other phone keeps the old drink in its BAC and
+  graph until pull-to-refresh. `consumed_at` is also the adding phone's own clock,
+  so a drink from a phone whose clock is behind falls before the cursor and is
+  skipped. Reload the full drink list on a slower cycle (or compare ids), with the
+  merge as a tested pure function. Found 2026-11-17.
+- [ ] **B8: two members with the same nickname share one line on the graph.** The
+  chart groups and colours by `point.nickname`, and `latestPointByMember` is keyed
+  by nickname; nothing stops two members from choosing the same one. Their points
+  are drawn as a single zig-zag line with one label. Key the series by user id and
+  keep the nickname for the label only. Found 2026-11-17.
+- [ ] **B9: drink input has no upper limits.** Volume only has to be above 0 and
+  ABV only 0 or more, so a slip such as ABV 400 or 33000 ml is saved, produces an
+  absurd BAC and is synced to the whole lobby. Reject ABV above 100 and volume
+  above a sane maximum (for example 2000 ml) in the add form, the edit sheet and
+  `updateDrink`, with a short message; add a check constraint as a migration file
+  once S1 is done. Found 2026-11-17.
 
 ## 3. Code health
 
