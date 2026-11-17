@@ -113,7 +113,7 @@ editor, then tick the line.
   invite code.
 - [ ] **U2: friendlier errors.** Status lines show raw `localizedDescription` from
   the network layer.
-- [ ] **U3: map**: frame all visible members, add a re-centre button; today it
+- [x] **U3: map**: frame all visible members, add a re-centre button; today it
   centres once on the first row returned.
 - [x] **U4: fix login copy** ("individuals inebreation"). Done 2026-11-16.
 - [ ] **U5 `needs-owner`: Sign in with Apple.** Google is the only sign-in; App
