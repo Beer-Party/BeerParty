@@ -89,6 +89,8 @@ editor, then tick the line.
   Done 2026-11-14: `BACCalculator`.
 - [ ] **Q2: split `LobbyView.swift` (1,915 lines, about 60 `@State` properties)**
   into a view model plus one view per section. Several PRs.
+  - [x] Part 1, 2026-11-17: the graph's visible time window (timeframe, pinch zoom,
+    axis ranges) moved to `BACGraphWindow`, with unit tests.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.

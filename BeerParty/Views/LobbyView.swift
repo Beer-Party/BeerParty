@@ -1324,51 +1324,11 @@ struct LobbyView: View {
   }
 
   private func graphDisplayData(from snapshot: BacSnapshot) -> BacGraphDisplayData {
-    guard let earliestTime = snapshot.points.map(\.time).min(),
-          let latestTime = snapshot.points.map(\.time).max() else {
-      return BacGraphDisplayData(
-        points: [],
-        latestPointByMember: [:],
-        xDomain: now...now,
-        maxY: snapshot.maxY,
-        baseDuration: nil,
-        visibleDuration: nil
-      )
-    }
-
-    let baseStart: Date
-    if let duration = selectedTimeframe.duration {
-      baseStart = max(earliestTime, latestTime.addingTimeInterval(-duration))
-    } else {
-      baseStart = earliestTime
-    }
-
-    let baseDomain = baseStart...latestTime
-    let baseDuration = max(baseDomain.upperBound.timeIntervalSince(baseDomain.lowerBound), 60)
-    let currentDuration = max(20 * 60, min(baseDuration, customVisibleDuration ?? baseDuration))
-    let visibleStart = max(baseDomain.lowerBound, baseDomain.upperBound.addingTimeInterval(-currentDuration))
-    let visibleDomain = visibleStart...baseDomain.upperBound
-
-    let filteredPoints = snapshot.points.filter { visibleDomain.contains($0.time) }
-    let latestPointByMember = Dictionary(
-      grouping: filteredPoints,
-      by: \.nickname
-    ).compactMapValues { memberPoints in
-      memberPoints.max { $0.time < $1.time }
-    }
-
-    let visibleMaxY = max(
-      0.05,
-      filteredPoints.map(\.bac).max() ?? snapshot.maxY
-    )
-
-    return BacGraphDisplayData(
-      points: filteredPoints,
-      latestPointByMember: latestPointByMember,
-      xDomain: visibleDomain,
-      maxY: visibleMaxY,
-      baseDuration: baseDuration,
-      visibleDuration: currentDuration
+    BACGraphWindow.displayData(
+      snapshot: snapshot,
+      now: now,
+      timeframeDuration: selectedTimeframe.duration,
+      customVisibleDuration: customVisibleDuration
     )
   }
 
@@ -1811,15 +1771,6 @@ struct LobbyView: View {
     )
   }
 
-}
-
-private struct BacGraphDisplayData {
-  let points: [BACPoint]
-  let latestPointByMember: [String: BACPoint]
-  let xDomain: ClosedRange<Date>
-  let maxY: Double
-  let baseDuration: TimeInterval?
-  let visibleDuration: TimeInterval?
 }
 
 private struct BuddyComparisonData {
