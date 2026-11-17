@@ -433,6 +433,19 @@ struct LobbyView: View {
             }
             .frame(height: 280)
             .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(alignment: .topTrailing) {
+              Button {
+                withAnimation { _ = frameVisibleMembers() }
+              } label: {
+                Image(systemName: "scope")
+                  .font(.body.weight(.semibold))
+                  .padding(8)
+                  .background(.thinMaterial, in: Circle())
+              }
+              .buttonStyle(.borderless)
+              .padding(8)
+              .accessibilityLabel("Re-centre map on members")
+            }
           }
 
           Toggle("Share my location in foreground", isOn: $currentUserShareForeground)
@@ -1509,18 +1522,24 @@ struct LobbyView: View {
       let rows = try await backendCoordinator.fetchMemberLocations(lobbyID: lobbyID)
       locationRows = rows
 
-      if !hasCenteredMap, let first = rows.first {
-        mapPosition = .region(
-          MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: first.lat, longitude: first.lng),
-            span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
-          )
-        )
+      if !hasCenteredMap, frameVisibleMembers() {
         hasCenteredMap = true
       }
     } catch {
       // Ignore transient map refresh failures.
     }
+  }
+
+  // Moves the map so every member with a fresh location is in view. Returns false
+  // when nobody is sharing a location yet.
+  @MainActor
+  private func frameVisibleMembers() -> Bool {
+    let coordinates = visibleLocationRows.map {
+      CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+    }
+    guard let region = MemberMapFraming.region(for: coordinates) else { return false }
+    mapPosition = .region(region)
+    return true
   }
 
   @MainActor
