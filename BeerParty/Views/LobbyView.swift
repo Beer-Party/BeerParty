@@ -60,6 +60,7 @@ struct LobbyView: View {
   @State private var lastBacSyncedValue: Double?
   @State private var lastDrinkCursor: Date?
   @State private var revealedInviteCode: String?
+  @State private var shareableInviteCode: String?
   @State private var isRevealingInviteCode: Bool = false
   @State private var hideInviteCodeTask: Task<Void, Never>?
   @State private var isLifecycleActionLoading: Bool = false
@@ -139,10 +140,6 @@ struct LobbyView: View {
           Text(lobbyName)
             .font(.largeTitle.bold())
 
-          Text("Lobby ID: \(lobbyID.uuidString)")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-
           Text(isLobbyActive ? "Status: Active" : "Status: Closed")
             .font(.footnote)
             .foregroundStyle(isLobbyActive ? .green : .red)
@@ -156,6 +153,15 @@ struct LobbyView: View {
           if let revealedInviteCode {
             Text("Invite code: \(revealedInviteCode)")
               .font(.footnote.monospaced())
+          }
+
+          if let shareableInviteCode {
+            ShareLink(
+              item: LobbyInvite.shareMessage(lobbyName: lobbyName, inviteCode: shareableInviteCode)
+            ) {
+              Label("Share invite code", systemImage: "square.and.arrow.up")
+            }
+            .font(.footnote)
           }
         }
 
@@ -1659,6 +1665,7 @@ struct LobbyView: View {
     do {
       let inviteCode = try await backendCoordinator.revealInviteCode(lobbyID: lobbyID)
       revealedInviteCode = inviteCode
+      shareableInviteCode = inviteCode
       hideInviteCodeTask?.cancel()
       hideInviteCodeTask = Task {
         try? await Task.sleep(nanoseconds: 10_000_000_000)
