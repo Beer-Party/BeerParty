@@ -994,7 +994,7 @@ struct LobbyView: View {
       await syncCurrentUserBACIfNeeded(at: Date(), force: true)
       syncLiveActivityContext()
     } catch {
-      statusMessage = "Failed to update drink: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "update the drink", error: error)
     }
   }
 
@@ -1016,7 +1016,7 @@ struct LobbyView: View {
       await syncCurrentUserBACIfNeeded(at: Date(), force: true)
       syncLiveActivityContext()
     } catch {
-      statusMessage = "Failed to delete drink: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "delete the drink", error: error)
     }
   }
 
@@ -1055,7 +1055,7 @@ struct LobbyView: View {
       syncLiveActivityContext()
       return true
     } catch {
-      statusMessage = "Failed to add drink: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "add the drink", error: error)
       return false
     }
   }
@@ -1074,7 +1074,7 @@ struct LobbyView: View {
       try await backendCoordinator.sendMadeItHome(lobbyID: lobbyID, nickname: currentUserNickname)
       statusMessage = "\(currentUserNickname) is safely at the fortress of dreams."
     } catch {
-      statusMessage = "Failed to send made-it-home update: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "send your made-it-home update", error: error)
     }
   }
 
@@ -1107,7 +1107,7 @@ struct LobbyView: View {
       await refreshMotionsIfNeeded(force: true)
       syncLiveActivityContext()
     } catch {
-      statusMessage = "Failed to load BAC tracker: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "load the lobby", error: error)
     }
   }
 
@@ -1254,7 +1254,7 @@ struct LobbyView: View {
       statusMessage = "Motion opened for voting."
       await refreshMotionsIfNeeded(force: true)
     } catch {
-      statusMessage = "Failed to create motion: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "create the motion", error: error)
     }
   }
 
@@ -1271,7 +1271,7 @@ struct LobbyView: View {
       statusMessage = vote == .aye ? "Aye vote submitted." : "Neigh vote submitted."
       await refreshMotionsIfNeeded(force: true)
     } catch {
-      statusMessage = "Failed to submit vote: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "submit your vote", error: error)
     }
   }
 
@@ -1493,7 +1493,7 @@ struct LobbyView: View {
       )
       refreshLocationTrackingState()
     } catch {
-      statusMessage = "Failed to save location preference: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "save your location setting", error: error)
     }
   }
 
@@ -1512,7 +1512,7 @@ struct LobbyView: View {
       )
       await refreshMemberLocations()
     } catch {
-      statusMessage = "Failed to sync location: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "share your location", error: error)
     }
   }
 
@@ -1661,7 +1661,7 @@ struct LobbyView: View {
         }
       }
     } catch {
-      statusMessage = "Failed to reveal invite code: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "show the invite code", error: error)
     }
   }
 
@@ -1684,7 +1684,7 @@ struct LobbyView: View {
       lobbyClosedAt = Date()
       statusMessage = "Closing time. Lobby is now closed. Live updates end in 5 hours."
     } catch {
-      statusMessage = "Failed to close lobby: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "close the lobby", error: error)
     }
   }
 
@@ -1723,7 +1723,7 @@ struct LobbyView: View {
       isQuickAddWidgetEnabled = false
       dismiss()
     } catch {
-      statusMessage = "Failed to leave lobby: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "leave the lobby", error: error)
     }
   }
 
@@ -1757,7 +1757,7 @@ struct LobbyView: View {
       clearDeleteArmTask = nil
       dismiss()
     } catch {
-      statusMessage = "Failed to delete lobby: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "delete the lobby", error: error)
     }
   }
 
@@ -1789,7 +1789,7 @@ struct LobbyView: View {
       lastBacSyncedAt = timestamp
       lastBacSyncedValue = myBAC
     } catch {
-      statusMessage = "Failed to sync BAC: \(error.localizedDescription)"
+      statusMessage = UserFacingError.message(couldNot: "update your BAC for the lobby", error: error)
     }
   }
 

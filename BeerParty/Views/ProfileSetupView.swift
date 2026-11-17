@@ -264,7 +264,7 @@ struct ProfileSetupView: View {
       selectedPhotoData = data
       message = ""
     } catch {
-      message = "Failed to load photo: \(error.localizedDescription)"
+      message = UserFacingError.message(couldNot: "load the photo", error: error)
     }
   }
 
@@ -291,7 +291,7 @@ struct ProfileSetupView: View {
         let normalized = try imageService.normalizeForUpload(selectedPhotoData)
         nextProfilePicPath = try await imageService.uploadProfileImage(normalized, userId: userId)
       } catch {
-        message = "Failed to upload profile photo: \(error.localizedDescription)"
+        message = UserFacingError.message(couldNot: "upload your profile photo", error: error)
         return
       }
     }
@@ -319,7 +319,7 @@ struct ProfileSetupView: View {
         dismiss()
       }
     } catch {
-      message = "Failed to save profile: \(error.localizedDescription)"
+      message = UserFacingError.message(couldNot: "save your profile", error: error)
     }
   }
 }

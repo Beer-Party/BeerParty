@@ -145,6 +145,6 @@ struct LoginView: View {
     if nsError.domain == ASWebAuthenticationSessionError.errorDomain && nsError.code == 1 {
       return "Authentication was canceled. If this happened automatically, check callback URL config in Supabase and Google."
     }
-    return error.localizedDescription
+    return UserFacingError.message(couldNot: "sign in", error: error)
   }
 }

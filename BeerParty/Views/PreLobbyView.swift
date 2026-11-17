@@ -261,7 +261,7 @@ struct PreLobbyView: View {
       try await supabase.auth.signOut()
       await authVM.loadInitialSession()
     } catch {
-      status = "Failed to sign out: \(error.localizedDescription)"
+      status = UserFacingError.message(couldNot: "sign out", error: error)
     }
   }
 
@@ -315,7 +315,7 @@ struct PreLobbyView: View {
       }
     } catch {
       memberLobbies = []
-      status = "Failed to load lobbies: \(error.localizedDescription)"
+      status = UserFacingError.message(couldNot: "load your lobbies", error: error)
     }
   }
 

@@ -97,7 +97,7 @@ struct LobbyLoginView: View {
       onJoined(destination)
       dismiss()
     } catch {
-      message = "Failed to join lobby: \(error.localizedDescription)"
+      message = UserFacingError.message(couldNot: "join the lobby", error: error)
     }
   }
 }
