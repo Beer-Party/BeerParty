@@ -154,7 +154,7 @@ struct MakeLobbyView: View {
       )
       dismiss()
     } catch {
-      message = "Failed to create lobby: \(error.localizedDescription)"
+      message = UserFacingError.message(couldNot: "create the lobby", error: error)
     }
   }
 }

@@ -111,7 +111,7 @@ editor, then tick the line.
 
 - [ ] **U1: lobby header**: drop the raw lobby UUID, add a share button for the
   invite code.
-- [ ] **U2: friendlier errors.** Status lines show raw `localizedDescription` from
+- [x] **U2: friendlier errors.** Status lines show raw `localizedDescription` from
   the network layer.
 - [ ] **U3: map**: frame all visible members, add a re-centre button; today it
   centres once on the first row returned.
