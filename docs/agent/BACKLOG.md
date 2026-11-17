@@ -92,8 +92,9 @@ editor, then tick the line.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.
-- [ ] **Q4: stop re-simulating every member's BAC on each render.** `body` calls
-  `buildBacSnapshot`, so it reruns on every keystroke in the drink form.
+- [x] **Q4: stop re-simulating every member's BAC on each render.** `body` calls
+  `buildBacSnapshot`, so it reruns on every keystroke in the drink form. Done
+  2026-11-17: `BACSnapshotCache`.
 - [x] **Q5: share the quick-add types between app and widget.** `AppIntent.swift`
   redeclares `QuickAddDrinkPreset`, `LobbyQuickAddContext` and the presets.
   Done 2026-11-14.

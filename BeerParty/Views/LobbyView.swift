@@ -104,6 +104,7 @@ struct LobbyView: View {
   @State private var editAbv: String = ""
   @State private var isSavingDrinkEdit = false
   @State private var drinkMutationInFlightID: UUID?
+  @State private var bacSnapshotCache = BACSnapshotCache()
   @FocusState private var focusedDrinkInput: DrinkInputField?
 
   private let liveTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -122,7 +123,12 @@ struct LobbyView: View {
 
   // Renders the lobby UI, including live BAC, chart, and drink entry controls.
   var body: some View {
-    let snapshot = buildBacSnapshot(at: now)
+    let snapshot = bacSnapshotCache.snapshot(
+      members: members,
+      drinks: drinks,
+      paramsByUserId: bacParamsByUserId,
+      at: now
+    )
     let chartData = graphDisplayData(from: snapshot)
     let buddyCandidates = buddyCandidates(from: snapshot)
     let buddyComparison = buddyComparison(from: snapshot)
