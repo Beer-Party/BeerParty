@@ -180,7 +180,7 @@ struct ProfileSetupView: View {
   }
 
   private var backendWeightPounds: Double? {
-    guard let enteredWeight = Double(weightText), enteredWeight > 0 else { return nil }
+    guard let enteredWeight = DecimalInput.parse(weightText), enteredWeight > 0 else { return nil }
     switch selectedWeightUnit {
     case .pounds:
       return enteredWeight
@@ -191,7 +191,7 @@ struct ProfileSetupView: View {
 
   private func convertDisplayedWeight(from previousUnit: WeightUnit, to nextUnit: WeightUnit) {
     guard previousUnit != nextUnit,
-          let displayedWeight = Double(weightText),
+          let displayedWeight = DecimalInput.parse(weightText),
           displayedWeight > 0 else {
       return
     }

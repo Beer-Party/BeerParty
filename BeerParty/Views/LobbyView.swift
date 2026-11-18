@@ -812,22 +812,22 @@ struct LobbyView: View {
   }
 
   private var parsedVolumeMl: Double? {
-    guard let parsed = Double(volumeMl), parsed > 0 else { return nil }
+    guard let parsed = DecimalInput.parse(volumeMl), parsed > 0 else { return nil }
     return parsed
   }
 
   private var parsedAbv: Double? {
-    guard let parsed = Double(abv), parsed >= 0 else { return nil }
+    guard let parsed = DecimalInput.parse(abv), parsed >= 0 else { return nil }
     return parsed
   }
 
   private var parsedEditVolumeMl: Double? {
-    guard let parsed = Double(editVolumeMl), parsed > 0 else { return nil }
+    guard let parsed = DecimalInput.parse(editVolumeMl), parsed > 0 else { return nil }
     return parsed
   }
 
   private var parsedEditAbv: Double? {
-    guard let parsed = Double(editAbv), parsed >= 0 else { return nil }
+    guard let parsed = DecimalInput.parse(editAbv), parsed >= 0 else { return nil }
     return parsed
   }
 
