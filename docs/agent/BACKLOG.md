@@ -57,6 +57,15 @@ editor, then tick the line.
   owner decision on what is deleted (profile, photo, drinks, memberships, lobbies
   the user created) and a server-side function, since the app cannot delete an
   auth user with the anon key. Found 2026-11-17.
+- [ ] **S8: signing out leaves the Lock Screen quick-add signed in.**
+  `PreLobbyView.signOut` only calls `supabase.auth.signOut()`. The quick-add
+  context in the shared app group (`lobby.quickadd.context`, which holds the
+  access token) and the Live Activity are removed only by lobby-screen actions
+  (leave, close, delete, switching the toggle off). After sign-out the Lock Screen
+  buttons therefore keep adding drinks and votes as the previous user until the
+  token expires (up to an hour), and the token stays on disk. Call
+  `LobbyLiveActivityService.endContext()` on sign-out and on the signed-out auth
+  event. Found 2026-11-18.
 
 ## 2. Bugs
 
@@ -113,6 +122,27 @@ editor, then tick the line.
   above a sane maximum (for example 2000 ml) in the add form, the edit sheet and
   `updateDrink`, with a short message; add a check constraint as a migration file
   once S1 is done. Found 2026-11-17.
+- [ ] **B9b (after S1): database check constraint for drink volume and ABV.**
+  Split out of B9, whose app-side limits are in the pull request of 2026-11-18.
+  A migration file adding `check (volume_ml >= 0 and volume_ml <= 2000 and abv >= 0
+  and abv <= 100)` to `drinks` (system-event rows use 0 and 0), so a modified
+  client cannot save absurd values either.
+- [ ] **B10: a failed "Make Lobby" leaves a half-made lobby behind.**
+  `MakeLobbyView.createLobby` sends four separate requests: insert into `lobbies`,
+  then `lobby_members`, `member_state` and the BAC parameters. If the second one
+  fails (connection drops), the lobby row exists with no members: it appears in
+  nobody's list, and trying again says "That invite code is already in use". Move
+  the steps into one function on `LobbyBackendService` that deletes the lobby row
+  again when a later step fails, with the order of steps unit-tested; the proper
+  fix is a single `create_lobby` database function after S1. Found 2026-11-18.
+- [ ] **B11: Lock Screen quick-add still adds drinks after the lobby is closed.**
+  The app's `insertDrink` refuses when the lobby is closed, but the widget's
+  `QuickAddDrinkIntent` posts straight to `drinks` with no such check. The Live
+  Activity is ended only if this phone has the lobby screen open when the lobby
+  closes (`refreshLobbyActivityStatus`), so a locked phone keeps its buttons and
+  its drinks land in a closed lobby (also after the 24-hour auto-close). In the
+  intent, read `lobbies.is_active` first; when closed, end the activity and say
+  so. A database rule belongs with S1. Found 2026-11-18.
 
 ## 3. Code health
 
@@ -155,3 +185,18 @@ editor, then tick the line.
   Store review generally expects an equivalent option alongside third-party login.
 - [ ] **U6 `needs-owner`: deployment target is iOS 26.2**, so only phones on the
   newest iOS can install. Lower it?
+- [ ] **U7: "Leave Lobby" deletes your drinks on a single tap.** "Closing Time"
+  and "Delete Lobby" both need a second confirming tap; "Leave Lobby" calls
+  `leaveLobby` at once, which deletes the user's drinks, BAC parameters and
+  membership for that lobby with no way back. Ask for confirmation in the same
+  two-tap style, with a line saying that the drinks logged in this lobby are
+  removed. Found 2026-11-18.
+- [ ] **U8: Lock Screen quick-add shows developer and raw server text.** The
+  dialogs in `BeerPartyWidget/AppIntent.swift` read "No active lobby found. Verify
+  App Group is enabled on app and widget." and "Could not add drink. Supabase 401:
+  {...}" (the raw response body). After the token expires on a locked phone (B4)
+  that 401 text is what the user sees. Map the cases to short sentences: no lobby
+  context, expired sign-in ("Open BeerParty to keep adding drinks."), offline,
+  anything else. The mapping should be a small function shared with the tests
+  (the widget cannot see `UserFacingError` today; U2 left this open). Found
+  2026-11-18.
