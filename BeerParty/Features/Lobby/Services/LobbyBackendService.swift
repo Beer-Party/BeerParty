@@ -906,6 +906,22 @@ struct LobbyBackendService {
     }
   }
 
+  // Fetches every drink row of the lobby (system-event rows included), oldest
+  // first. Used by the slow full reload that picks up edits and deletions.
+  func fetchAllDrinks(lobbyID: UUID) async throws -> [LobbyDrink] {
+    let rows: [DrinkRow] = try await supabase
+      .from("drinks")
+      .select("id,user_id,name,volume_ml,abv,consumed_at")
+      .eq("lobby_id", value: lobbyID)
+      .order("consumed_at", ascending: true)
+      .execute()
+      .value
+
+    return rows.compactMap { row in
+      drink(from: row)
+    }
+  }
+
   // Writes the user's latest BAC estimate into member_state.
   func upsertMemberBAC(
     lobbyID: UUID,

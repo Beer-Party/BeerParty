@@ -46,6 +46,10 @@ struct LobbyViewBackendCoordinator {
     try await backendService.fetchNewDrinks(lobbyID: lobbyID, after: timestamp)
   }
 
+  func fetchAllDrinks(lobbyID: UUID) async throws -> [LobbyDrink] {
+    try await backendService.fetchAllDrinks(lobbyID: lobbyID)
+  }
+
   func insertDrink(
     lobbyID: UUID,
     name: String,

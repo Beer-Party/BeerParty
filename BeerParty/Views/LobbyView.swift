@@ -111,6 +111,7 @@ struct LobbyView: View {
   private let liveTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
   private let bacSyncTimer = Timer.publish(every: 300, on: .main, in: .common).autoconnect()
   private let locationRefreshTimer = Timer.publish(every: 20, on: .main, in: .common).autoconnect()
+  private let drinkReloadTimer = Timer.publish(every: 120, on: .main, in: .common).autoconnect()
   private let backendCoordinator = LobbyViewBackendCoordinator()
   @StateObject private var locationTrackingService = LocationTrackingService()
   private let imageService = ProfileImageService()
@@ -779,6 +780,9 @@ struct LobbyView: View {
       }
       Task { await refreshMemberLocations() }
     }
+    .onReceive(drinkReloadTimer) { _ in
+      Task { await reloadAllDrinksIfNeeded() }
+    }
     .onChange(of: members.map(\.userId)) { _, ids in
       if let selectedBuddyID, !ids.contains(selectedBuddyID) {
         self.selectedBuddyID = nil
@@ -1152,12 +1156,40 @@ struct LobbyView: View {
         statusMessage = "\(latestHomeNickname) is safely at the fortress of dreams."
       }
 
-      let consumableDrinks = newDrinks.filter { !isSystemEvent($0) }
+      // The full reload may already have delivered some of these.
+      let consumableDrinks = DrinkListReload.drinksNotShown(
+        newDrinks.filter { !isSystemEvent($0) },
+        shown: drinks
+      )
       if !consumableDrinks.isEmpty {
         drinks.append(contentsOf: consumableDrinks)
         drinks.sort { $0.consumedAt < $1.consumedAt }
       }
       lastDrinkCursor = newDrinks.map(\.consumedAt).max()
+    } catch {
+      // Ignore periodic refresh failures; manual refresh still reloads everything.
+    }
+  }
+
+  private var isDrinkMutationInFlight: Bool {
+    isSubmitting || isSavingDrinkEdit || drinkMutationInFlightID != nil
+  }
+
+  // Every two minutes: reloads the whole drink list, so other members' edits and
+  // deletions, and drinks the cursor above skipped, reach this phone as well.
+  @MainActor
+  private func reloadAllDrinksIfNeeded() async {
+    guard shouldContinueLiveUpdates, !isDrinkMutationInFlight else { return }
+    let shownBefore = drinks
+    do {
+      let fetched = try await backendCoordinator.fetchAllDrinks(lobbyID: lobbyID)
+      guard !isDrinkMutationInFlight else { return }
+      guard let reloaded = DrinkListReload.reloadedList(
+        shownBefore: shownBefore,
+        shownNow: drinks,
+        fetched: fetched.filter { !isSystemEvent($0) }
+      ) else { return }
+      drinks = reloaded
     } catch {
       // Ignore periodic refresh failures; manual refresh still reloads everything.
     }
