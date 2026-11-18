@@ -4,7 +4,7 @@ import Foundation
 /// the newest point per member (for the name labels) and the axis ranges.
 struct BacGraphDisplayData {
   let points: [BACPoint]
-  let latestPointByMember: [String: BACPoint]
+  let latestPointByMember: [UUID: BACPoint]
   let xDomain: ClosedRange<Date>
   let maxY: Double
   let baseDuration: TimeInterval?
@@ -56,7 +56,7 @@ enum BACGraphWindow {
     let filteredPoints = snapshot.points.filter { visibleDomain.contains($0.time) }
     let latestPointByMember = Dictionary(
       grouping: filteredPoints,
-      by: \.nickname
+      by: \.userId
     ).compactMapValues { memberPoints in
       memberPoints.max { $0.time < $1.time }
     }

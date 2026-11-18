@@ -15,6 +15,7 @@ enum BACCalculator {
     }
     var current: [MemberBACSnapshot] = []
     var points: [BACPoint] = []
+    let seriesLabels = BACSeriesLabels.labels(for: members)
     let hasAnyDrinks = !drinks.isEmpty
 
     let allDrinkTimes = drinks.map(\.consumedAt)
@@ -43,7 +44,9 @@ enum BACCalculator {
         points.append(contentsOf: simulation.points.map {
           BACPoint(
             id: "\(member.userId.uuidString)-\($0.time.timeIntervalSince1970)",
+            userId: member.userId,
             nickname: member.nickname,
+            label: seriesLabels[member.userId] ?? member.nickname,
             time: $0.time,
             bac: $0.bac
           )
@@ -160,7 +163,12 @@ struct MemberBACSnapshot: Identifiable {
 
 struct BACPoint: Identifiable {
   let id: String
+  /// Whose line the point belongs to. Lines are told apart by this, not by name.
+  let userId: UUID
   let nickname: String
+  /// The name shown on the graph: the nickname, or "Anna (2)" when another
+  /// member has the same one (see `BACSeriesLabels`).
+  let label: String
   let time: Date
   let bac: Double
 }

@@ -5,10 +5,19 @@ import XCTest
 final class BACGraphWindowTests: XCTestCase {
   private let start = Date(timeIntervalSince1970: 1_800_000_000)
 
+  private let annaID = UUID()
+  private let benID = UUID()
+
   private func point(_ nickname: String, hour: Double, bac: Double) -> BACPoint {
+    point(nickname, userId: nickname == "Anna" ? annaID : benID, hour: hour, bac: bac)
+  }
+
+  private func point(_ nickname: String, userId: UUID, hour: Double, bac: Double) -> BACPoint {
     BACPoint(
-      id: "\(nickname)-\(hour)",
+      id: "\(userId.uuidString)-\(hour)",
+      userId: userId,
       nickname: nickname,
+      label: nickname,
       time: start.addingTimeInterval(hour * 3600),
       bac: bac
     )
@@ -120,9 +129,26 @@ final class BACGraphWindowTests: XCTestCase {
       customVisibleDuration: nil
     )
 
-    XCTAssertEqual(data.latestPointByMember["Anna"]?.time, start.addingTimeInterval(6 * 3600))
-    XCTAssertEqual(data.latestPointByMember["Ben"]?.time, start.addingTimeInterval(6 * 3600))
+    XCTAssertEqual(data.latestPointByMember[annaID]?.time, start.addingTimeInterval(6 * 3600))
+    XCTAssertEqual(data.latestPointByMember[benID]?.time, start.addingTimeInterval(6 * 3600))
     XCTAssertEqual(data.latestPointByMember.count, 2)
+  }
+
+  // Two members who chose the same nickname are still two lines.
+  func testMembersWithTheSameNicknameEachKeepTheirOwnLatestPoint() {
+    let secondAnnaID = UUID()
+    let first = (0...2).map { point("Anna", hour: Double($0), bac: 0.1) }
+    let second = (0...3).map { point("Anna", userId: secondAnnaID, hour: Double($0), bac: 0.3) }
+    let data = BACGraphWindow.displayData(
+      snapshot: BacSnapshot(current: [], points: first + second, maxY: 0.3),
+      now: start,
+      timeframeDuration: nil,
+      customVisibleDuration: nil
+    )
+
+    XCTAssertEqual(data.latestPointByMember.count, 2)
+    XCTAssertEqual(data.latestPointByMember[annaID]?.time, start.addingTimeInterval(2 * 3600))
+    XCTAssertEqual(data.latestPointByMember[secondAnnaID]?.time, start.addingTimeInterval(3 * 3600))
   }
 
   // The y-axis follows the visible points, but never shrinks below 0.05.
