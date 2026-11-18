@@ -1186,41 +1186,21 @@ struct LobbyView: View {
     }
   }
 
+  // The parsing of system-event rows lives in LobbySystemEvent.
   private func isSystemEvent(_ drink: LobbyDrink) -> Bool {
-    motionArrivalTarget(from: drink) != nil ||
-      madeItHomeNickname(from: drink) != nil ||
-      closedAtTime(from: drink) != nil
+    LobbySystemEvent.isSystemEvent(drink)
   }
 
   private func madeItHomeNickname(from drink: LobbyDrink) -> String? {
-    guard drink.name.hasPrefix(LobbyBackendService.madeItHomeDrinkPrefix) else { return nil }
-    let rawNickname = String(drink.name.dropFirst(LobbyBackendService.madeItHomeDrinkPrefix.count))
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    return rawNickname.isEmpty ? "Member" : rawNickname
+    LobbySystemEvent.madeItHomeNickname(from: drink)
   }
 
   private func closedAtTime(from drink: LobbyDrink) -> Date? {
-    guard drink.name.hasPrefix(LobbyBackendService.lobbyClosedDrinkPrefix) else { return nil }
-    let raw = String(drink.name.dropFirst(LobbyBackendService.lobbyClosedDrinkPrefix.count))
-    let isoString = raw.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
-    guard !isoString.isEmpty else { return drink.consumedAt }
-    let isoWithFractions = ISO8601DateFormatter()
-    isoWithFractions.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let parsed = isoWithFractions.date(from: isoString) {
-      return parsed
-    }
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    return iso.date(from: isoString) ?? drink.consumedAt
+    LobbySystemEvent.closedAtTime(from: drink)
   }
 
   private func motionArrivalTarget(from drink: LobbyDrink) -> String? {
-    guard drink.name.hasPrefix(LobbyBackendService.motionArrivedDrinkPrefix) else { return nil }
-    let raw = String(drink.name.dropFirst(LobbyBackendService.motionArrivedDrinkPrefix.count))
-    let segments = raw.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
-    guard segments.count == 2 else { return nil }
-    let target = String(segments[1]).trimmingCharacters(in: .whitespacesAndNewlines)
-    return target.isEmpty ? "the destination" : target
+    LobbySystemEvent.motionArrivalTarget(from: drink)
   }
 
   @MainActor

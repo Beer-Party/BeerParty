@@ -123,6 +123,8 @@ editor, then tick the line.
   into a view model plus one view per section. Several PRs.
   - [x] Part 1, 2026-11-17: the graph's visible time window (timeframe, pinch zoom,
     axis ranges) moved to `BACGraphWindow`, with unit tests.
+  - [x] Part 2, 2026-11-18: reading the system-event rows ("made it home", "lobby
+    closed", "motion due") moved to `LobbySystemEvent`, with unit tests.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.
