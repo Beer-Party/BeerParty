@@ -122,7 +122,6 @@ struct LobbyView: View {
     GridItem(.flexible(), spacing: 12),
     GridItem(.flexible(), spacing: 12)
   ]
-  private let standardBeerGrams = 330.0 * 0.05 * 0.789
   private let motionDelayOptions = Array(stride(from: 5, through: 45, by: 5))
 
   // Renders the lobby UI, including live BAC, chart, and drink entry controls.
@@ -1366,24 +1365,12 @@ struct LobbyView: View {
   }
 
   private func buddyComparison(from snapshot: BacSnapshot) -> BuddyComparisonData? {
-    guard let currentUserID,
-          let selectedBuddyID,
-          let me = snapshot.current.first(where: { $0.userId == currentUserID }),
-          let buddy = snapshot.current.first(where: { $0.userId == selectedBuddyID }) else {
-      return nil
-    }
-
-    let bacGapSigned = me.bac - buddy.bac
-    let bacGap = abs(bacGapSigned)
-    let parameters = BACCalculator.parameters(for: bacParamsByUserId[currentUserID])
-    let alcoholGramsGap = bacGap * parameters.tbw / 0.84
-    let standardBeerGap = alcoholGramsGap / standardBeerGrams
-
-    return BuddyComparisonData(
-      buddyNickname: buddy.nickname,
-      bacGap: bacGap,
-      standardBeerGap: standardBeerGap,
-      isAhead: bacGapSigned >= 0
+    guard let currentUserID else { return nil }
+    return BuddyComparison.compare(
+      current: snapshot.current,
+      currentUserID: currentUserID,
+      buddyID: selectedBuddyID,
+      currentUserParams: bacParamsByUserId[currentUserID]
     )
   }
 
@@ -1866,15 +1853,4 @@ struct LobbyView: View {
     )
   }
 
-}
-
-private struct BuddyComparisonData {
-  let buddyNickname: String
-  let bacGap: Double
-  let standardBeerGap: Double
-  let isAhead: Bool
-
-  var isEven: Bool {
-    bacGap < 0.01
-  }
 }
