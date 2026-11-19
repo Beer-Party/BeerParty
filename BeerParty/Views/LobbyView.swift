@@ -290,21 +290,21 @@ struct LobbyView: View {
               LineMark(
                 x: .value("Time", point.time),
                 y: .value("BAC", point.bac),
-                series: .value("Member", point.nickname)
+                series: .value("Member", point.userId.uuidString)
               )
               .interpolationMethod(.catmullRom)
               .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-              .foregroundStyle(by: .value("Member", point.nickname))
+              .foregroundStyle(by: .value("Member", point.label))
 
-              if let rightLabelPoint = chartData.latestPointByMember[point.nickname], rightLabelPoint.id == point.id {
+              if let rightLabelPoint = chartData.latestPointByMember[point.userId], rightLabelPoint.id == point.id {
                 PointMark(
                   x: .value("Time", point.time),
                   y: .value("BAC", point.bac)
                 )
-                .foregroundStyle(by: .value("Member", point.nickname))
+                .foregroundStyle(by: .value("Member", point.label))
                 .symbolSize(18)
                 .annotation(position: .trailing, alignment: .leading) {
-                  Text(point.nickname)
+                  Text(point.label)
                     .font(.caption.bold())
                     .lineLimit(1)
                     .padding(.horizontal, 6)
@@ -395,7 +395,7 @@ struct LobbyView: View {
 
             if isInspectionActive, let inspectedPoint {
               HStack {
-                Text(inspectedPoint.nickname)
+                Text(inspectedPoint.label)
                   .font(.caption.bold())
                 Spacer()
                 Text("\(inspectedPoint.time, style: .time)")

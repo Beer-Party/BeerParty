@@ -102,7 +102,7 @@ editor, then tick the line.
   so a drink from a phone whose clock is behind falls before the cursor and is
   skipped. Reload the full drink list on a slower cycle (or compare ids), with the
   merge as a tested pure function. Found 2026-11-17.
-- [ ] **B8: two members with the same nickname share one line on the graph.** The
+- [x] **B8: two members with the same nickname share one line on the graph.** The
   chart groups and colours by `point.nickname`, and `latestPointByMember` is keyed
   by nickname; nothing stops two members from choosing the same one. Their points
   are drawn as a single zig-zag line with one label. Key the series by user id and

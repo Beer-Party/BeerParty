@@ -152,6 +152,28 @@ final class BACCalculatorTests: XCTestCase {
     XCTAssertEqual(snapshot.points.count, 21)
   }
 
+  // Two members with the same nickname stay two separate lines on the graph.
+  func testSnapshotKeepsMembersWithTheSameNicknameApart() {
+    let first = LobbyMemberData(userId: UUID(), nickname: "Anna", profilePicPath: nil)
+    let second = LobbyMemberData(userId: UUID(), nickname: "Anna", profilePicPath: nil)
+    let drinks = [drink(user: first.userId), drink(user: second.userId, minutesAfterStart: 10)]
+
+    let snapshot = BACCalculator.snapshot(
+      members: [first, second],
+      drinks: drinks,
+      paramsByUserId: [:],
+      at: start.addingTimeInterval(3600)
+    )
+
+    XCTAssertEqual(Set(snapshot.points.map(\.userId)), [first.userId, second.userId])
+    XCTAssertEqual(Set(snapshot.points.map(\.label)), ["Anna", "Anna (2)"])
+    for userId in [first.userId, second.userId] {
+      let ownPoints = snapshot.points.filter { $0.userId == userId }
+      XCTAssertEqual(ownPoints.count, 7)
+      XCTAssertEqual(Set(ownPoints.map(\.label)).count, 1)
+    }
+  }
+
   func testSnapshotWithoutDrinksHasNoGraphPoints() {
     let anna = LobbyMemberData(userId: UUID(), nickname: "Anna", profilePicPath: nil)
     let snapshot = BACCalculator.snapshot(members: [anna], drinks: [], paramsByUserId: [:], at: start)
