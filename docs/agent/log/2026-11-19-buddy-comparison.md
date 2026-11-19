@@ -9,7 +9,7 @@
   function, so the view body is untouched. The `standardBeerGrams` constant moved
   with the sum.
 - The logic is copied as it was; no behaviour change is intended.
-- `LobbyView.swift` goes from 1,817 to 1,794 lines.
+- `LobbyView.swift` goes from 1,817 to 1,793 lines.
 - Unit tests in `BuddyComparisonTests`: no buddy chosen, a member missing from the
   snapshot, ahead, behind, even, and the beer gap with saved and with default body
   parameters.
