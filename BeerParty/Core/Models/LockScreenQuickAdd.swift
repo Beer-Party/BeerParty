@@ -32,6 +32,57 @@ struct LobbyQuickAddContext: Codable {
   let updatedAt: Date
 }
 
+/// Whether drinks can still be added to a lobby, as far as one quick request can
+/// tell. Used by the Lock Screen quick-add, which has no lobby screen to ask.
+enum LobbyOpenState: Equatable {
+  case open
+  case closed
+  /// No answer: offline, sign-in expired, or the lobby row was not returned.
+  case unknown
+
+  /// The app closes a lobby the next time it is opened after this long.
+  static let maximumOpenDuration: TimeInterval = 24 * 3600
+
+  /// Reads the answer to
+  /// `GET /rest/v1/lobbies?select=is_active,created_at&id=eq.<lobby id>`.
+  static func from(statusCode: Int, body: Data, now: Date) -> LobbyOpenState {
+    guard (200..<300).contains(statusCode),
+          let rows = try? JSONDecoder().decode([Row].self, from: body),
+          let row = rows.first
+    else {
+      return .unknown
+    }
+
+    guard row.isActive else { return .closed }
+
+    if let createdAt = row.createdAt.flatMap(parseTimestamp),
+       now.timeIntervalSince(createdAt) >= maximumOpenDuration
+    {
+      return .closed
+    }
+    return .open
+  }
+
+  private struct Row: Decodable {
+    let isActive: Bool
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+      case isActive = "is_active"
+      case createdAt = "created_at"
+    }
+  }
+
+  private static func parseTimestamp(_ raw: String) -> Date? {
+    let withFractions = ISO8601DateFormatter()
+    withFractions.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = withFractions.date(from: raw) {
+      return date
+    }
+    return ISO8601DateFormatter().date(from: raw)
+  }
+}
+
 enum LobbyQuickAddStore {
   static let appGroupID = "group.com.beerparty.shared"
   static let key = "lobby.quickadd.context"
