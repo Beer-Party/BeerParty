@@ -68,6 +68,8 @@ struct LobbyView: View {
   @State private var isCloseArmed: Bool = false
   @State private var clearDeleteArmTask: Task<Void, Never>?
   @State private var clearCloseArmTask: Task<Void, Never>?
+  @State private var isLeaveArmed: Bool = false
+  @State private var clearLeaveArmTask: Task<Void, Never>?
   @State private var mapPosition: MapCameraPosition = .region(
     MKCoordinateRegion(
       center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
@@ -539,11 +541,11 @@ struct LobbyView: View {
               }
             } else {
               actionGlassButton(
-                title: "Leave Lobby",
+                title: isLeaveArmed ? "Confirm Leave Lobby" : "Leave Lobby",
                 glow: .orange,
                 disabled: isLifecycleActionLoading
               ) {
-                Task { await leaveLobby() }
+                Task { await leaveLobbyWithTwoStepConfirmation() }
               }
             }
           }
@@ -809,6 +811,8 @@ struct LobbyView: View {
       clearDeleteArmTask = nil
       clearCloseArmTask?.cancel()
       clearCloseArmTask = nil
+      clearLeaveArmTask?.cancel()
+      clearLeaveArmTask = nil
       endLocationSharing()
     }
   }
@@ -1744,6 +1748,30 @@ struct LobbyView: View {
     clearCloseArmTask?.cancel()
     clearCloseArmTask = nil
     await closeLobby()
+  }
+
+  @MainActor
+  // Requires two taps to leave: leaving deletes the drinks this member logged here.
+  private func leaveLobbyWithTwoStepConfirmation() async {
+    if !isLeaveArmed {
+      isLeaveArmed = true
+      statusMessage = "Leaving removes the drinks you logged in this lobby. Tap 'Confirm Leave Lobby' within 8 seconds to leave."
+      clearLeaveArmTask?.cancel()
+      clearLeaveArmTask = Task {
+        try? await Task.sleep(nanoseconds: 8_000_000_000)
+        if !Task.isCancelled {
+          await MainActor.run {
+            isLeaveArmed = false
+          }
+        }
+      }
+      return
+    }
+
+    isLeaveArmed = false
+    clearLeaveArmTask?.cancel()
+    clearLeaveArmTask = nil
+    await leaveLobby()
   }
 
   @MainActor
