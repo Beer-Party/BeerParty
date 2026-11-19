@@ -90,79 +90,15 @@ struct MakeLobbyView: View {
     defer { isLoading = false }
 
     do {
-      let session = try await supabase.auth.session
-      let existingCodeRows: [InviteCodeOnlyRow] = try await supabase
-        .from("lobbies")
-        .select("invite_code")
-        .eq("invite_code", value: trimmedInviteCode)
-        .limit(1)
-        .execute()
-        .value
-
-      if !existingCodeRows.isEmpty {
-        message = "That invite code is already in use. Pick a different one."
-        return
-      }
-
-      let request = CreateLobbyRequest(
-        createdBy: session.user.id,
+      let destination = try await backendService.createLobby(
         name: trimmedName,
         inviteCode: trimmedInviteCode,
-        isActive: true
+        nickname: trimmedNickname
       )
-
-      let createdLobby: CreatedLobby = try await supabase
-        .from("lobbies")
-        .insert(request, returning: .representation)
-        .single()
-        .execute()
-        .value
-
-      let memberRequest = CreateLobbyMemberRequest(
-        lobbyId: createdLobby.id,
-        userId: session.user.id,
-        nickname: trimmedNickname,
-        role: "admin"
-      )
-
-      try await supabase
-        .from("lobby_members")
-        .insert(memberRequest)
-        .execute()
-
-      let memberStateRequest = UpsertMemberStateRequest(
-        lobbyId: createdLobby.id,
-        userId: session.user.id,
-        bacEtimate: nil,
-        lat: nil,
-        lng: nil,
-        updatedAt: Date()
-      )
-
-      try await supabase
-        .from("member_state")
-        .upsert(memberStateRequest, onConflict: "lobby_id,user_id")
-        .execute()
-
-      try await backendService.ensureBACParamsForCurrentUser(lobbyID: createdLobby.id)
-
-      onCreated(
-        LobbyDestination(
-          lobbyID: createdLobby.id,
-          lobbyName: createdLobby.name
-        )
-      )
+      onCreated(destination)
       dismiss()
     } catch {
       message = UserFacingError.message(couldNot: "create the lobby", error: error)
     }
-  }
-}
-
-private struct InviteCodeOnlyRow: Decodable {
-  let inviteCode: String
-
-  enum CodingKeys: String, CodingKey {
-    case inviteCode = "invite_code"
   }
 }

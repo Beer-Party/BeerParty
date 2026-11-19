@@ -237,6 +237,120 @@ struct LobbyBackendService {
     return LobbyDestination(lobbyID: lobby.id, lobbyName: lobby.name)
   }
 
+  // Creates a lobby with the current user as its admin member. If a step after
+  // the lobby row fails, the lobby row is removed again so the invite code is free.
+  func createLobby(name: String, inviteCode: String, nickname: String) async throws -> LobbyDestination {
+    let session = try await supabase.auth.session
+    let userID = session.user.id
+
+    var holders = try await lobbiesHolding(inviteCode: inviteCode)
+    let ownHolders = holders.filter { $0.createdBy == userID }
+    if !ownHolders.isEmpty {
+      // A lobby of this user's with no members is what an earlier failed attempt
+      // left behind (its clean-up fails too when the connection is gone).
+      for holder in ownHolders {
+        if try await hasNoMembers(lobbyID: holder.id) {
+          await removeHalfMadeLobby(lobbyID: holder.id, creatorID: userID)
+        }
+      }
+      holders = try await lobbiesHolding(inviteCode: inviteCode)
+    }
+    guard holders.isEmpty else {
+      throw LobbyCreationError.inviteCodeInUse
+    }
+
+    let created = try await LobbyCreation.perform(
+      create: { () async throws -> CreatedLobby in
+        let request = CreateLobbyRequest(
+          createdBy: userID,
+          name: name,
+          inviteCode: inviteCode,
+          isActive: true
+        )
+        let lobby: CreatedLobby = try await supabase
+          .from("lobbies")
+          .insert(request, returning: .representation)
+          .single()
+          .execute()
+          .value
+        return lobby
+      },
+      finish: { (lobby: CreatedLobby) async throws -> Void in
+        let memberRequest = CreateLobbyMemberRequest(
+          lobbyId: lobby.id,
+          userId: userID,
+          nickname: nickname,
+          role: "admin"
+        )
+        try await supabase
+          .from("lobby_members")
+          .insert(memberRequest)
+          .execute()
+
+        let memberStateRequest = UpsertMemberStateRequest(
+          lobbyId: lobby.id,
+          userId: userID,
+          bacEtimate: nil,
+          lat: nil,
+          lng: nil,
+          updatedAt: Date()
+        )
+        try await supabase
+          .from("member_state")
+          .upsert(memberStateRequest, onConflict: "lobby_id,user_id")
+          .execute()
+
+        try await ensureCurrentUserBACParams(lobbyID: lobby.id, userID: userID)
+      },
+      undo: { (lobby: CreatedLobby) async -> Void in
+        await removeHalfMadeLobby(lobbyID: lobby.id, creatorID: userID)
+      }
+    )
+
+    return LobbyDestination(lobbyID: created.id, lobbyName: created.name)
+  }
+
+  private func lobbiesHolding(inviteCode: String) async throws -> [LobbyCodeHolderRow] {
+    try await supabase
+      .from("lobbies")
+      .select("id,created_by")
+      .eq("invite_code", value: inviteCode)
+      .limit(5)
+      .execute()
+      .value
+  }
+
+  private func hasNoMembers(lobbyID: UUID) async throws -> Bool {
+    let rows: [LobbyMembershipRow] = try await supabase
+      .from("lobby_members")
+      .select("lobby_id")
+      .eq("lobby_id", value: lobbyID)
+      .limit(1)
+      .execute()
+      .value
+    return rows.isEmpty
+  }
+
+  // Best effort, in the same order as deleteLobby: the creator's own rows, then
+  // the lobby row. Errors are ignored; whatever is left is found on the next try.
+  private func removeHalfMadeLobby(lobbyID: UUID, creatorID: UUID) async {
+    for table in ["member_state", "lobby_member_bac_params", "lobby_members"] {
+      _ = try? await supabase
+        .from(table)
+        .delete()
+        .eq("lobby_id", value: lobbyID)
+        .eq("user_id", value: creatorID)
+        .execute()
+    }
+
+    _ = try? await supabase
+      .from("lobbies")
+      .delete()
+      .eq("id", value: lobbyID)
+      .eq("created_by", value: creatorID)
+      .execute()
+  }
+
   // Loads lobby metadata and auto-closes it if it has been active for over 24 hours.
   func fetchLobbyMetaAndApplyExpiry(lobbyID: UUID) async throws -> LobbyMeta {
     let rows: [LobbyMetaRow] = try await supabase
@@ -1193,6 +1307,16 @@ private struct LobbyInviteCodeRow: Decodable {
 
   enum CodingKeys: String, CodingKey {
     case inviteCode = "invite_code"
+  }
+}
+
+private struct LobbyCodeHolderRow: Decodable {
+  let id: UUID
+  let createdBy: UUID?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case createdBy = "created_by"
   }
 }
 
