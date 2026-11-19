@@ -88,7 +88,7 @@ editor, then tick the line.
     reads the old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
     delete them (migration).
-- [ ] **B6: a decimal comma is rejected.** `LobbyView` parses volume and ABV with
+- [x] **B6: a decimal comma is rejected.** `LobbyView` parses volume and ABV with
   `Double(text)` (add form and edit sheet), and `ProfileSetupView` does the same
   for weight. The decimal keypad shows a comma in most European regions, and
   `Double("4,7")` is nil, so "Add Drink" and "Save" stay disabled with no
