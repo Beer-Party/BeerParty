@@ -40,6 +40,12 @@ enum LobbyQuickAddStore {
   static func customPresetKey(lobbyID: UUID) -> String {
     "\(customPresetKeyPrefix)\(lobbyID.uuidString)"
   }
+
+  /// Removes the saved context, which holds the signed-in user's access token.
+  /// The custom drink presets are kept: they hold no account data.
+  static func removeContext(from defaults: UserDefaults?) {
+    defaults?.removeObject(forKey: key)
+  }
 }
 
 #if canImport(ActivityKit)

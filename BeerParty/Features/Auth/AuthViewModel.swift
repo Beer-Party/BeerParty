@@ -61,6 +61,10 @@ final class AuthViewModel: ObservableObject {
       self.userId = nil
       self.profileState = .unknown
       self.verifiedProfileUserId = nil
+      // Signed out, also when the session ended by itself (a refresh that was
+      // refused, a sign-out on another screen): the Lock Screen quick-add must not
+      // keep working with the previous user's access token.
+      LobbyLiveActivityService().endContext()
     }
   }
 

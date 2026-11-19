@@ -73,9 +73,7 @@ struct LobbyLiveActivityService {
   }
 
   func endContext() {
-    if let defaults = UserDefaults(suiteName: LobbyQuickAddStore.appGroupID) {
-      defaults.removeObject(forKey: LobbyQuickAddStore.key)
-    }
+    LobbyQuickAddStore.removeContext(from: UserDefaults(suiteName: LobbyQuickAddStore.appGroupID))
 
     #if canImport(ActivityKit)
     if #available(iOS 16.2, *) {
