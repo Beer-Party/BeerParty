@@ -94,7 +94,7 @@ editor, then tick the line.
   `Double("4,7")` is nil, so "Add Drink" and "Save" stay disabled with no
   explanation. Parse both separators in one shared helper, with unit tests. Found
   2026-11-17.
-- [ ] **B7: other members' edited and deleted drinks never arrive, and some new
+- [x] **B7: other members' edited and deleted drinks never arrive, and some new
   ones are missed.** The 30-second refresh asks only for drinks with `consumed_at`
   later than the newest one already shown (`fetchNewDrinks`). An edit or a delete
   changes no such row, so every other phone keeps the old drink in its BAC and
