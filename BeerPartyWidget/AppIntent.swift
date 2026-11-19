@@ -1,4 +1,5 @@
 import Foundation
+import ActivityKit
 import AppIntents
 
 // QuickAddDrinkPreset, LobbyQuickAddContext and LobbyQuickAddStore come from
@@ -61,6 +62,13 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
       return .result(dialog: "Custom drink unavailable.")
     }
 
+    // The app refuses drinks for a closed lobby; a locked phone never opened the
+    // lobby screen to find out, so ask here. Without an answer, carry on as before.
+    if await lobbyOpenState(context: context) == .closed {
+      await endLiveActivity()
+      return .result(dialog: "This lobby is closed. Drinks can no longer be added.")
+    }
+
     do {
       try await insertDrink(context: context, preset: selected)
       return .result(dialog: "Added \(selected.name).")
@@ -91,6 +99,39 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
       return .water
     case .custom:
       return context.lastCustomPreset
+    }
+  }
+
+  private func lobbyOpenState(context: LobbyQuickAddContext) async -> LobbyOpenState {
+    guard var components = URLComponents(string: "\(context.supabaseURL)/rest/v1/lobbies") else {
+      return .unknown
+    }
+    components.queryItems = [
+      URLQueryItem(name: "select", value: "is_active,created_at"),
+      URLQueryItem(name: "id", value: "eq.\(context.lobbyID.uuidString)")
+    ]
+    guard let url = components.url else {
+      return .unknown
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.addValue(context.supabaseAnonKey, forHTTPHeaderField: "apikey")
+    request.addValue("Bearer \(context.accessToken)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    request.timeoutInterval = 6
+
+    guard let (data, response) = try? await URLSession.shared.data(for: request),
+          let http = response as? HTTPURLResponse
+    else {
+      return .unknown
+    }
+    return LobbyOpenState.from(statusCode: http.statusCode, body: data, now: Date())
+  }
+
+  private func endLiveActivity() async {
+    for activity in Activity<LobbyQuickAddActivityAttributes>.activities {
+      await activity.end(nil, dismissalPolicy: .immediate)
     }
   }
 
