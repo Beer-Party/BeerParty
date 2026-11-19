@@ -54,7 +54,7 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
 
   func perform() async throws -> some IntentResult & ProvidesDialog {
     guard let context = loadContext() else {
-      return .result(dialog: "No active lobby found. Verify App Group is enabled on app and widget.")
+      return .result(dialog: "\(QuickAddFailure.noLobbyMessage)")
     }
 
     guard let selected = selectedPreset(from: context) else {
@@ -65,7 +65,8 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
       try await insertDrink(context: context, preset: selected)
       return .result(dialog: "Added \(selected.name).")
     } catch {
-      return .result(dialog: "Could not add drink. \(error.localizedDescription)")
+      let message = QuickAddFailure.from(error: error).message(couldNot: "add the drink")
+      return .result(dialog: "\(message)")
     }
   }
 
@@ -119,24 +120,15 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
 
     request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-    let (data, response) = try await URLSession.shared.data(for: request)
+    let (_, response) = try await URLSession.shared.data(for: request)
     guard let http = response as? HTTPURLResponse else {
-      throw QuickAddIntentError(message: "No HTTP response from Supabase.")
+      throw QuickAddFailure.other
     }
 
     guard (200..<300).contains(http.statusCode) else {
-      let serverMessage = String(data: data, encoding: .utf8)?
-        .replacingOccurrences(of: "\n", with: " ")
-        .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown server error"
-      throw QuickAddIntentError(message: "Supabase \(http.statusCode): \(serverMessage)")
+      throw QuickAddFailure.from(statusCode: http.statusCode)
     }
   }
-}
-
-private struct QuickAddIntentError: LocalizedError {
-  let message: String
-
-  var errorDescription: String? { message }
 }
 
 @available(iOS 17.0, *)
@@ -156,7 +148,7 @@ struct CastMotionVoteIntent: LiveActivityIntent {
 
   func perform() async throws -> some IntentResult & ProvidesDialog {
     guard let context = loadContext() else {
-      return .result(dialog: "No active lobby found.")
+      return .result(dialog: "\(QuickAddFailure.noLobbyMessage)")
     }
 
     guard (context.shouldShowMotionVote ?? false), let motionID = context.activeMotionID else {
@@ -168,7 +160,8 @@ struct CastMotionVoteIntent: LiveActivityIntent {
       let label = vote == .aye ? "Aye" : "Neigh"
       return .result(dialog: "\(label) vote submitted.")
     } catch {
-      return .result(dialog: "Could not submit vote. \(error.localizedDescription)")
+      let message = QuickAddFailure.from(error: error).message(couldNot: "send your vote")
+      return .result(dialog: "\(message)")
     }
   }
 
@@ -206,15 +199,12 @@ struct CastMotionVoteIntent: LiveActivityIntent {
 
     request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-    let (data, response) = try await URLSession.shared.data(for: request)
+    let (_, response) = try await URLSession.shared.data(for: request)
     guard let http = response as? HTTPURLResponse else {
-      throw QuickAddIntentError(message: "No HTTP response from Supabase.")
+      throw QuickAddFailure.other
     }
     guard (200..<300).contains(http.statusCode) else {
-      let serverMessage = String(data: data, encoding: .utf8)?
-        .replacingOccurrences(of: "\n", with: " ")
-        .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown server error"
-      throw QuickAddIntentError(message: "Supabase \(http.statusCode): \(serverMessage)")
+      throw QuickAddFailure.from(statusCode: http.statusCode)
     }
   }
 }
