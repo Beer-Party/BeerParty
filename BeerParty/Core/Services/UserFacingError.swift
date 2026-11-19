@@ -24,6 +24,7 @@ enum UserFacingError {
   static func appMessage(for error: Error) -> String? {
     guard error is LobbyJoinError
       || error is LobbyLifecycleError
+      || error is LobbyCreationError
       || error is DrinkMutationError
       || error is ProfileImageError
     else { return nil }
