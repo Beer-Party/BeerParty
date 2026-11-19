@@ -257,6 +257,9 @@ struct PreLobbyView: View {
 
   @MainActor
   private func signOut() async {
+    // The Lock Screen buttons act as this user with a saved access token. End them
+    // first, so they are gone even when the sign-out request itself fails.
+    LobbyLiveActivityService().endContext()
     do {
       try await supabase.auth.signOut()
       await authVM.loadInitialSession()
