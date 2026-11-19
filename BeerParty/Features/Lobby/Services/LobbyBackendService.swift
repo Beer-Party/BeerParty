@@ -47,6 +47,7 @@ enum LobbyLifecycleError: LocalizedError {
 enum DrinkMutationError: LocalizedError {
   case editWindowExpired
   case invalidInput
+  case outOfRange
 
   var errorDescription: String? {
     switch self {
@@ -54,6 +55,8 @@ enum DrinkMutationError: LocalizedError {
       return "Drinks can only be edited or deleted within 15 minutes of being added."
     case .invalidInput:
       return "Enter a drink name, volume, and ABV before saving."
+    case .outOfRange:
+      return "\(DrinkInputLimits.volumeMessage) \(DrinkInputLimits.abvMessage)"
     }
   }
 }
@@ -411,6 +414,10 @@ struct LobbyBackendService {
     volumeMl: Double,
     abv: Double
   ) async throws -> LobbyDrink {
+    guard DrinkInputLimits.allows(volumeMl: volumeMl, abv: abv) else {
+      throw DrinkMutationError.outOfRange
+    }
+
     let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
     guard meta.isActive else {
       throw LobbyLifecycleError.lobbyClosed
@@ -453,6 +460,9 @@ struct LobbyBackendService {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty, volumeMl > 0, abv >= 0 else {
       throw DrinkMutationError.invalidInput
+    }
+    guard DrinkInputLimits.allows(volumeMl: volumeMl, abv: abv) else {
+      throw DrinkMutationError.outOfRange
     }
 
     let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)

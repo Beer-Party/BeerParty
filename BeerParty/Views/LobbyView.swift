@@ -476,12 +476,18 @@ struct LobbyView: View {
               .keyboardType(.decimalPad)
               .focused($focusedDrinkInput, equals: .abv)
 
+            if let addDrinkLimitMessage {
+              Text(addDrinkLimitMessage)
+                .font(.footnote)
+                .foregroundStyle(.red)
+            }
+
             Toggle("Use as widget custom button", isOn: $shouldUseManualDrinkAsWidgetCustom)
 
             Button(isSubmitting ? "Adding..." : "Add Drink") {
               Task { await addManualDrink() }
             }
-            .disabled(isSubmitting || !canAddManualDrink || !isLobbyActive)
+            .disabled(isSubmitting || !canAddManualDrink || addDrinkLimitMessage != nil || !isLobbyActive)
           }
 
           Section("Widget") {
@@ -723,6 +729,12 @@ struct LobbyView: View {
 
             TextField("ABV (%)", text: $editAbv)
               .keyboardType(.decimalPad)
+
+            if let editDrinkLimitMessage {
+              Text(editDrinkLimitMessage)
+                .font(.footnote)
+                .foregroundStyle(.red)
+            }
           }
 
           Section {
@@ -745,7 +757,9 @@ struct LobbyView: View {
             Button(isSavingDrinkEdit ? "Saving..." : "Save") {
               Task { await saveDrinkEdit(drink) }
             }
-            .disabled(isSavingDrinkEdit || !canSaveDrinkEdit || !canModifyDrink(drink))
+            .disabled(
+              isSavingDrinkEdit || !canSaveDrinkEdit || editDrinkLimitMessage != nil || !canModifyDrink(drink)
+            )
           }
         }
       }
@@ -843,6 +857,15 @@ struct LobbyView: View {
   private var currentUserNickname: String? {
     guard let currentUserID else { return nil }
     return members.first(where: { $0.userId == currentUserID })?.nickname
+  }
+
+  // Why the typed volume or ABV is too large, or nil when it is fine.
+  private var addDrinkLimitMessage: String? {
+    DrinkInputLimits.message(volumeMl: parsedVolumeMl, abv: parsedAbv)
+  }
+
+  private var editDrinkLimitMessage: String? {
+    DrinkInputLimits.message(volumeMl: parsedEditVolumeMl, abv: parsedEditAbv)
   }
 
   private var currentUserDrinkHistory: [LobbyDrink] {

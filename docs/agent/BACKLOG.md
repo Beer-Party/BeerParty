@@ -107,7 +107,7 @@ editor, then tick the line.
   by nickname; nothing stops two members from choosing the same one. Their points
   are drawn as a single zig-zag line with one label. Key the series by user id and
   keep the nickname for the label only. Found 2026-11-17.
-- [ ] **B9: drink input has no upper limits.** Volume only has to be above 0 and
+- [x] **B9: drink input has no upper limits.** Volume only has to be above 0 and
   ABV only 0 or more, so a slip such as ABV 400 or 33000 ml is saved, produces an
   absurd BAC and is synced to the whole lobby. Reject ABV above 100 and volume
   above a sane maximum (for example 2000 ml) in the add form, the edit sheet and
