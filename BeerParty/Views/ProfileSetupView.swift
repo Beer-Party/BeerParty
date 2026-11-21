@@ -312,6 +312,16 @@ struct ProfileSetupView: View {
         .upsert(profile)
         .execute()
 
+      // The profile now points at the new photo, so the one before it can go.
+      if let replaced = ProfilePhotoPath.replacedPath(
+        old: profilePicPath,
+        new: nextProfilePicPath,
+        userID: userId
+      ) {
+        await imageService.removeProfileImage(path: replaced)
+      }
+      profilePicPath = nextProfilePicPath
+
       await authVM.refreshProfileState()
       onSaved?()
 
