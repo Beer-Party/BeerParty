@@ -460,6 +460,15 @@ struct LobbyView: View {
             .onChange(of: currentUserShareBackground) { _, _ in
               Task { await updateLocationSharingPreference() }
             }
+
+          if LocationTrackingPlan.needsSettingsHint(
+            wantsTracking: currentUserShareForeground,
+            status: locationTrackingService.authorizationStatus
+          ) {
+            Text(LocationTrackingPlan.settingsHint)
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+          }
         }
 
         if isLobbyActive {
