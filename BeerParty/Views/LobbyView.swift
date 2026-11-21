@@ -1331,15 +1331,17 @@ struct LobbyView: View {
 
   @MainActor
   private func resolveAndNotifyMotionsIfNeeded(from allMotions: [LobbyMotion]) async {
-    let memberCount = max(1, members.count)
     let now = Date()
 
     for motion in allMotions where motion.isActive {
-      let allVoted = motion.votes.count >= memberCount
-      let voteWindowExpired = now >= motion.votingClosesAt
-      guard allVoted || voteWindowExpired else { continue }
+      guard let passed = MotionTally.outcome(
+        ayeCount: motion.ayeCount,
+        voteCount: motion.votes.count,
+        memberCount: members.count,
+        votingClosesAt: motion.votingClosesAt,
+        now: now
+      ) else { continue }
 
-      let passed = (Double(motion.ayeCount) / Double(memberCount)) > (2.0 / 3.0)
       try? await backendCoordinator.closeMotion(motionID: motion.id, passed: passed)
     }
 
@@ -1347,7 +1349,12 @@ struct LobbyView: View {
     motions = latest
 
     for motion in latest where !motion.isActive {
-      guard motion.passed == true, motion.targetAt <= now, motion.notifiedAt == nil else { continue }
+      guard MotionTally.shouldAnnounceArrival(
+        passed: motion.passed,
+        targetAt: motion.targetAt,
+        notifiedAt: motion.notifiedAt,
+        now: now
+      ) else { continue }
       let didNotify = (try? await backendCoordinator.notifyMotionArrivalIfNeeded(
         lobbyID: lobbyID,
         motionID: motion.id,
