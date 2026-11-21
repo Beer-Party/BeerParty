@@ -10,7 +10,10 @@ final class LocationTrackingService: NSObject, ObservableObject {
   var onLocationUpdate: ((CLLocation) -> Void)?
 
   private let manager = CLLocationManager()
-  private var isTracking = false
+  // True from startTracking until stopTracking: the user wants updates, whether or
+  // not permission has been given yet.
+  private var wantsTracking = false
+  private var wantsBackground = false
 
   override init() {
     super.init()
@@ -23,26 +26,35 @@ final class LocationTrackingService: NSObject, ObservableObject {
 
   func startTracking(allowsBackground: Bool) {
     manager.allowsBackgroundLocationUpdates = allowsBackground
-
-    switch manager.authorizationStatus {
-    case .notDetermined:
-      manager.requestWhenInUseAuthorization()
-    case .authorizedWhenInUse, .authorizedAlways:
-      if allowsBackground, manager.authorizationStatus == .authorizedWhenInUse {
-        manager.requestAlwaysAuthorization()
-      }
-      manager.startUpdatingLocation()
-      isTracking = true
-    case .restricted, .denied:
-      stopTracking()
-    @unknown default:
-      stopTracking()
-    }
+    wantsTracking = true
+    wantsBackground = allowsBackground
+    applyTrackingPlan(mayAskPermission: true)
   }
 
   func stopTracking() {
     manager.stopUpdatingLocation()
-    isTracking = false
+    wantsTracking = false
+  }
+
+  // Starts or stops updates for the current permission. The permission callback
+  // calls this too, so updates begin as soon as the user taps "Allow".
+  private func applyTrackingPlan(mayAskPermission: Bool) {
+    let status = manager.authorizationStatus
+    switch LocationTrackingPlan.step(wantsTracking: wantsTracking, status: status) {
+    case .askPermission:
+      if mayAskPermission {
+        manager.requestWhenInUseAuthorization()
+      }
+    case .start:
+      if mayAskPermission, wantsBackground, status == .authorizedWhenInUse {
+        manager.requestAlwaysAuthorization()
+      }
+      manager.startUpdatingLocation()
+    case .stop:
+      // Keeps wantsTracking, so sharing resumes if permission is given later in
+      // Settings while the toggle is still on.
+      manager.stopUpdatingLocation()
+    }
   }
 }
 
@@ -50,17 +62,8 @@ extension LocationTrackingService: CLLocationManagerDelegate {
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     Task { @MainActor in
       authorizationStatus = manager.authorizationStatus
-      if isTracking {
-        switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-          manager.startUpdatingLocation()
-        case .restricted, .denied:
-          stopTracking()
-        case .notDetermined:
-          break
-        @unknown default:
-          break
-        }
+      if wantsTracking {
+        applyTrackingPlan(mayAskPermission: false)
       }
     }
   }
