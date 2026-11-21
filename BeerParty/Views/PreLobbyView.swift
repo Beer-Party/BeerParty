@@ -12,6 +12,7 @@ struct PreLobbyView: View {
   @EnvironmentObject var authVM: AuthViewModel
   @State private var status: String = ""
   @State private var isLoadingLobbies: Bool = false
+  @State private var lobbyLoadError: String = ""
   @State private var isShowingCreateLobby: Bool = false
   @State private var isShowingJoinLobby: Bool = false
   @State private var isShowingProfileEditor: Bool = false
@@ -73,7 +74,7 @@ struct PreLobbyView: View {
               Text("Your Lobbies")
                 .font(.headline)
 
-              if isLoadingLobbies {
+              if isLoadingLobbies && memberLobbies.isEmpty {
                 HStack {
                   ProgressView()
                   Text("Loading lobbies...")
@@ -94,6 +95,12 @@ struct PreLobbyView: View {
                 }
               }
 
+              if !lobbyLoadError.isEmpty {
+                Text(lobbyLoadError)
+                  .font(.footnote)
+                  .foregroundStyle(.secondary)
+              }
+
               if !status.isEmpty {
                 Text(status)
                   .font(.footnote)
@@ -105,6 +112,11 @@ struct PreLobbyView: View {
           }
           .padding(.horizontal, 14)
           .padding(.vertical, 10)
+        }
+        .refreshable {
+          // Own task: the reload changes view state, and SwiftUI can cancel the
+          // refresh task (and the request with it) when the view updates.
+          await Task { await loadInitialData() }.value
         }
       }
       .navigationTitle("Beer Party")
@@ -283,6 +295,7 @@ struct PreLobbyView: View {
 
       if memberships.isEmpty {
         memberLobbies = []
+        lobbyLoadError = ""
         return
       }
 
@@ -302,7 +315,7 @@ struct PreLobbyView: View {
         .value
       let countsByLobbyID = Dictionary(grouping: memberRows, by: \.lobbyID).mapValues(\.count)
 
-      memberLobbies = lobbies.map { lobby in
+      let loaded = lobbies.map { lobby in
         LobbyListItem(
           destination: LobbyDestination(lobbyID: lobby.id, lobbyName: lobby.name),
           isActive: lobby.isActive,
@@ -310,15 +323,12 @@ struct PreLobbyView: View {
           createdAt: parseLobbyTimestamp(lobby.createdAtRaw)
         )
       }
-      .sorted { lhs, rhs in
-        if lhs.isActive != rhs.isActive {
-          return lhs.isActive && !rhs.isActive
-        }
-        return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
-      }
+      memberLobbies = LobbyListItem.afterReload(shown: memberLobbies, loaded: loaded)
+      lobbyLoadError = ""
     } catch {
-      memberLobbies = []
-      status = UserFacingError.message(couldNot: "load your lobbies", error: error)
+      // Keep the rows already shown: one failed request should not empty the list.
+      memberLobbies = LobbyListItem.afterReload(shown: memberLobbies, loaded: nil)
+      lobbyLoadError = UserFacingError.message(couldNot: "load your lobbies", error: error)
     }
   }
 
@@ -377,13 +387,4 @@ private struct LobbyMemberCountRow: Decodable {
   enum CodingKeys: String, CodingKey {
     case lobbyID = "lobby_id"
   }
-}
-
-private struct LobbyListItem: Identifiable {
-  let destination: LobbyDestination
-  let isActive: Bool
-  let memberCount: Int
-  let createdAt: Date?
-
-  var id: UUID { destination.lobbyID }
 }
