@@ -57,7 +57,7 @@ editor, then tick the line.
   owner decision on what is deleted (profile, photo, drinks, memberships, lobbies
   the user created) and a server-side function, since the app cannot delete an
   auth user with the anon key. Found 2026-11-17.
-- [ ] **S8: signing out leaves the Lock Screen quick-add signed in.**
+- [x] **S8: signing out leaves the Lock Screen quick-add signed in.**
   `PreLobbyView.signOut` only calls `supabase.auth.signOut()`. The quick-add
   context in the shared app group (`lobby.quickadd.context`, which holds the
   access token) and the Live Activity are removed only by lobby-screen actions
@@ -65,7 +65,16 @@ editor, then tick the line.
   buttons therefore keep adding drinks and votes as the previous user until the
   token expires (up to an hour), and the token stays on disk. Call
   `LobbyLiveActivityService.endContext()` on sign-out and on the signed-out auth
-  event. Found 2026-11-18.
+  event. Found 2026-11-18. Done 2026-11-19.
+- [ ] **S9 `needs-owner`: profile photos can be fetched by anyone who has the
+  link.** `ProfileImageService.publicImageURL` uses `getPublicURL` on the
+  `profile_pics` bucket, so the bucket is public: a photo at
+  `<user id>/avatar.jpg` loads without signing in, for ever, and also after the
+  user has left every lobby. Owner decides: keep it public (simple, and user ids
+  are hard to guess), or make the bucket private and have the app ask for
+  short-lived signed links, readable only by people who share a lobby with the
+  user. The second needs a storage policy change in Supabase, which only an owner
+  can make. Found 2026-11-20.
 
 ## 2. Bugs
 
@@ -127,7 +136,7 @@ editor, then tick the line.
   A migration file adding `check (volume_ml >= 0 and volume_ml <= 2000 and abv >= 0
   and abv <= 100)` to `drinks` (system-event rows use 0 and 0), so a modified
   client cannot save absurd values either.
-- [ ] **B10: a failed "Make Lobby" leaves a half-made lobby behind.**
+- [x] **B10: a failed "Make Lobby" leaves a half-made lobby behind.**
   `MakeLobbyView.createLobby` sends four separate requests: insert into `lobbies`,
   then `lobby_members`, `member_state` and the BAC parameters. If the second one
   fails (connection drops), the lobby row exists with no members: it appears in
@@ -135,14 +144,44 @@ editor, then tick the line.
   the steps into one function on `LobbyBackendService` that deletes the lobby row
   again when a later step fails, with the order of steps unit-tested; the proper
   fix is a single `create_lobby` database function after S1. Found 2026-11-18.
-- [ ] **B11: Lock Screen quick-add still adds drinks after the lobby is closed.**
+  Done 2026-11-19 in the app; the database function still waits for S1.
+- [x] **B11: Lock Screen quick-add still adds drinks after the lobby is closed.**
   The app's `insertDrink` refuses when the lobby is closed, but the widget's
   `QuickAddDrinkIntent` posts straight to `drinks` with no such check. The Live
   Activity is ended only if this phone has the lobby screen open when the lobby
   closes (`refreshLobbyActivityStatus`), so a locked phone keeps its buttons and
   its drinks land in a closed lobby (also after the 24-hour auto-close). In the
   intent, read `lobbies.is_active` first; when closed, end the activity and say
-  so. A database rule belongs with S1. Found 2026-11-18.
+  so. A database rule belongs with S1. Found 2026-11-18. Done 2026-11-19 in the
+  widget; the database rule still waits for S1.
+- [ ] **B12: location sharing does not start the first time permission is
+  given.** `LocationTrackingService.startTracking` only asks for permission when
+  the status is "not determined" and returns without setting `isTracking`. When
+  the user then taps "Allow", `locationManagerDidChangeAuthorization` starts
+  updates only if `isTracking` is true, so nothing starts. The toggle is on but no
+  pin appears until the user switches it off and on, or leaves the lobby and comes
+  back. Remember that tracking was asked for and start it when permission arrives;
+  put the decision ("ask", "start", "stop" for each permission status) in a small
+  tested function. When permission is refused the toggle also stays on with no
+  explanation: show one line pointing to Settings. Found 2026-11-20.
+- [ ] **B13: one failed refresh empties "Your Lobbies".**
+  `PreLobbyView.loadMemberLobbies` sets `memberLobbies = []` in its `catch`, so a
+  single failed request (no signal in a bar) replaces the list with only an error
+  line and there is no way to get into a lobby until the screen appears again.
+  Keep the list that is already shown when a reload fails, and add
+  pull-to-refresh to the screen (the lobby screen has it, this one does not).
+  The sort order (open lobbies first, then newest) can move into a small tested
+  function at the same time. Found 2026-11-20.
+- [ ] **B14: a changed profile photo keeps showing the old one.** The photo is
+  always uploaded to the same path, `<user id>/avatar.jpg`, with `upsert`, so its
+  public link never changes. `AsyncImage` and the storage CDN cache by link, so
+  the user and the other lobby members go on seeing the old photo, often for
+  hours. Upload under a new name each time (for example
+  `avatar-<timestamp>.jpg`), save that path in `profiles.profile_pic_path`, and
+  remove the previous file afterwards (best effort). The path naming should be a
+  small tested function. Whether the app is allowed to delete the old file
+  depends on the bucket's rules, which are not in the repo (S1). Found
+  2026-11-20.
 
 ## 3. Code health
 
@@ -191,13 +230,13 @@ editor, then tick the line.
   Store review generally expects an equivalent option alongside third-party login.
 - [ ] **U6 `needs-owner`: deployment target is iOS 26.2**, so only phones on the
   newest iOS can install. Lower it?
-- [ ] **U7: "Leave Lobby" deletes your drinks on a single tap.** "Closing Time"
+- [x] **U7: "Leave Lobby" deletes your drinks on a single tap.** "Closing Time"
   and "Delete Lobby" both need a second confirming tap; "Leave Lobby" calls
   `leaveLobby` at once, which deletes the user's drinks, BAC parameters and
   membership for that lobby with no way back. Ask for confirmation in the same
   two-tap style, with a line saying that the drinks logged in this lobby are
-  removed. Found 2026-11-18.
-- [ ] **U8: Lock Screen quick-add shows developer and raw server text.** The
+  removed. Found 2026-11-18. Done 2026-11-19; device check still open.
+- [x] **U8: Lock Screen quick-add shows developer and raw server text.** The
   dialogs in `BeerPartyWidget/AppIntent.swift` read "No active lobby found. Verify
   App Group is enabled on app and widget." and "Could not add drink. Supabase 401:
   {...}" (the raw response body). After the token expires on a locked phone (B4)
@@ -205,4 +244,11 @@ editor, then tick the line.
   context, expired sign-in ("Open BeerParty to keep adding drinks."), offline,
   anything else. The mapping should be a small function shared with the tests
   (the widget cannot see `UserFacingError` today; U2 left this open). Found
-  2026-11-18.
+  2026-11-18. Done 2026-11-19.
+- [ ] **U9: the invite code is hidden while typing and has two names.** "Join
+  Lobby" asks for the "Invite code" in a `SecureField`, and "Make Lobby" calls
+  the same thing "Lobby password", also hidden. The code is then shown in plain
+  text in the lobby header and sent to friends with the share button (U1), so
+  hiding it protects nothing, and a typo while joining only shows up as "no
+  lobby found". Use a normal text field (no autocorrection, no capitalisation)
+  on both screens and call it "Invite code" everywhere. Found 2026-11-20.
