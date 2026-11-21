@@ -13,7 +13,7 @@ struct MakeLobbyView: View {
   @Environment(\.dismiss) private var dismiss
 
   @State private var lobbyName: String = ""
-  @State private var lobbyPassword: String = ""
+  @State private var inviteCode: String = ""
   @State private var nickname: String = ""
   @State private var message: String = ""
   @State private var isLoading: Bool = false
@@ -22,7 +22,7 @@ struct MakeLobbyView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("New Lobby") {
+        Section {
           TextField("Lobby name", text: $lobbyName)
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
@@ -31,9 +31,14 @@ struct MakeLobbyView: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
 
-          SecureField("Lobby password", text: $lobbyPassword)
+          // Shown as typed: the code is given to friends and is visible in the lobby.
+          TextField("Invite code", text: $inviteCode)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+        } header: {
+          Text("New Lobby")
+        } footer: {
+          Text("Friends join with the invite code. Use at least 4 characters.")
         }
 
         if !message.isEmpty {
@@ -80,7 +85,7 @@ struct MakeLobbyView: View {
   }
 
   private var trimmedInviteCode: String {
-    lobbyPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+    inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   @MainActor
