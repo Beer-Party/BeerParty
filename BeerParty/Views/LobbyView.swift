@@ -1414,38 +1414,12 @@ struct LobbyView: View {
     }
     let hoveredBAC: Double? = chartProxy.value(atY: yPosition, as: Double.self)
 
-    let nearest = points.min { lhs, rhs in
-      pointDistanceScore(
-        point: lhs,
-        hoveredTime: hoveredTime,
-        hoveredBAC: hoveredBAC,
-        maxY: maxY
-      ) < pointDistanceScore(
-        point: rhs,
-        hoveredTime: hoveredTime,
-        hoveredBAC: hoveredBAC,
-        maxY: maxY
-      )
-    }
-
-    inspectedPoint = nearest
-  }
-
-  private func pointDistanceScore(
-    point: BACPoint,
-    hoveredTime: Date,
-    hoveredBAC: Double?,
-    maxY: Double
-  ) -> Double {
-    let timeDistanceSeconds = abs(point.time.timeIntervalSince(hoveredTime))
-    let normalizedTimeDistance = timeDistanceSeconds / 120
-    let normalizedBacDistance: Double
-    if let hoveredBAC {
-      normalizedBacDistance = abs(point.bac - hoveredBAC) / max(maxY, 0.05)
-    } else {
-      normalizedBacDistance = 0
-    }
-    return normalizedTimeDistance + normalizedBacDistance
+    inspectedPoint = BACGraphInspection.nearestPoint(
+      in: points,
+      hoveredTime: hoveredTime,
+      hoveredBAC: hoveredBAC,
+      maxY: maxY
+    )
   }
 
   @MainActor

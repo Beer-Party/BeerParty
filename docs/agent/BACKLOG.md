@@ -155,6 +155,10 @@ editor, then tick the line.
     axis ranges) moved to `BACGraphWindow`, with unit tests.
   - [x] Part 2, 2026-11-18: reading the system-event rows ("made it home", "lobby
     closed", "motion due") moved to `LobbySystemEvent`, with unit tests.
+  - [x] Part 3, 2026-11-19: the buddy comparison moved to `BuddyComparison`, with
+    unit tests.
+  - [x] Part 4, 2026-11-20: choosing the graph point under a long press moved to
+    `BACGraphInspection`, with unit tests.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.
