@@ -42,18 +42,39 @@ struct ProfileImageService {
     throw ProfileImageError.imageTooLarge
   }
 
-  func uploadProfileImage(_ imageData: Data, userId: UUID) async throws -> String {
-    let path = "\(userId.uuidString)/avatar.jpg"
+  // Uploads under a new file name, so the photo's link changes and no phone or
+  // cache keeps showing the old picture. Returns the path to save in the profile.
+  func uploadProfileImage(_ imageData: Data, userId: UUID, at date: Date = Date()) async throws -> String {
+    let newPath = ProfilePhotoPath.newPath(userID: userId, at: date)
 
-    _ = try await supabase.storage
-      .from(bucketName)
-      .upload(
-        path,
-        data: imageData,
-        options: FileOptions(contentType: "image/jpeg", upsert: true)
-      )
+    do {
+      _ = try await supabase.storage
+        .from(bucketName)
+        .upload(
+          newPath,
+          data: imageData,
+          options: FileOptions(contentType: "image/jpeg", upsert: true)
+        )
+      return newPath
+    } catch {
+      // The bucket's rules are not in the repo. If they only allow the old file
+      // name, save there as before rather than fail the whole profile save.
+      let legacyPath = ProfilePhotoPath.legacyPath(userID: userId)
+      _ = try await supabase.storage
+        .from(bucketName)
+        .upload(
+          legacyPath,
+          data: imageData,
+          options: FileOptions(contentType: "image/jpeg", upsert: true)
+        )
+      return legacyPath
+    }
+  }
 
-    return path
+  // Deletes a photo that the profile no longer points at. Best effort: a file
+  // that could not be deleted is left behind and nothing is shown to the user.
+  func removeProfileImage(path: String) async {
+    _ = try? await supabase.storage.from(bucketName).remove(paths: [path])
   }
 
   func publicImageURL(for path: String?) -> URL? {
