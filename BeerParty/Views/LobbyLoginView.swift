@@ -39,7 +39,8 @@ struct LobbyLoginView: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
 
-          SecureField("Invite code", text: $inviteCode)
+          // Shown as typed, so a typo is seen before "Join" is tapped.
+          TextField("Invite code", text: $inviteCode)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
         }
