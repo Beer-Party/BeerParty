@@ -154,7 +154,7 @@ editor, then tick the line.
   intent, read `lobbies.is_active` first; when closed, end the activity and say
   so. A database rule belongs with S1. Found 2026-11-18. Done 2026-11-19 in the
   widget; the database rule still waits for S1.
-- [ ] **B12: location sharing does not start the first time permission is
+- [x] **B12: location sharing does not start the first time permission is
   given.** `LocationTrackingService.startTracking` only asks for permission when
   the status is "not determined" and returns without setting `isTracking`. When
   the user then taps "Allow", `locationManagerDidChangeAuthorization` starts
@@ -163,16 +163,17 @@ editor, then tick the line.
   back. Remember that tracking was asked for and start it when permission arrives;
   put the decision ("ask", "start", "stop" for each permission status) in a small
   tested function. When permission is refused the toggle also stays on with no
-  explanation: show one line pointing to Settings. Found 2026-11-20.
-- [ ] **B13: one failed refresh empties "Your Lobbies".**
+  explanation: show one line pointing to Settings. Found 2026-11-20. Done
+  2026-11-21; device check still open.
+- [x] **B13: one failed refresh empties "Your Lobbies".**
   `PreLobbyView.loadMemberLobbies` sets `memberLobbies = []` in its `catch`, so a
   single failed request (no signal in a bar) replaces the list with only an error
   line and there is no way to get into a lobby until the screen appears again.
   Keep the list that is already shown when a reload fails, and add
   pull-to-refresh to the screen (the lobby screen has it, this one does not).
   The sort order (open lobbies first, then newest) can move into a small tested
-  function at the same time. Found 2026-11-20.
-- [ ] **B14: a changed profile photo keeps showing the old one.** The photo is
+  function at the same time. Found 2026-11-20. Done 2026-11-21.
+- [x] **B14: a changed profile photo keeps showing the old one.** The photo is
   always uploaded to the same path, `<user id>/avatar.jpg`, with `upsert`, so its
   public link never changes. `AsyncImage` and the storage CDN cache by link, so
   the user and the other lobby members go on seeing the old photo, often for
@@ -181,7 +182,49 @@ editor, then tick the line.
   remove the previous file afterwards (best effort). The path naming should be a
   small tested function. Whether the app is allowed to delete the old file
   depends on the bucket's rules, which are not in the repo (S1). Found
-  2026-11-20.
+  2026-11-20. Done 2026-11-21; whether the old file is really removed needs a
+  check in the Supabase storage browser.
+- [ ] **B15: everyone's BAC is worked out with the same body values, whatever
+  their weight and gender.** `ensureCurrentUserBACParams` in
+  `LobbyBackendService` asks for `id,weight,age,gender` and decodes the answer as
+  `UserProfile`. That type also requires `share_location_foreground` and
+  `share_location_background`, which are not in the answer, so decoding always
+  fails and the `catch` saves the fallback (body water 40, elimination 0.14) for
+  every member. A 60 kg woman and a 100 kg man get the same BAC from the same
+  drinks. Decode into a small type with only the four fields, and move
+  `deriveBACParametersFromProfile` into a plain tested function (with a test that
+  decodes exactly the JSON the query returns). Rows already saved in
+  `lobby_member_bac_params` keep the fallback because a row is only written when
+  none exists: also rewrite the user's own row when it differs from the derived
+  values, which makes a changed weight count in lobbies joined earlier too. Found
+  2026-11-22.
+- [ ] **B16: a member who stays in one place disappears from the map after five
+  minutes.** `LocationTrackingService` reports a position only after 25 metres of
+  movement (`distanceFilter = 25`), and the position is uploaded only then.
+  `LobbyView.visibleLocationRows` hides every pin older than five minutes. A
+  friend sitting in the bar, the usual case, is therefore gone from the map
+  until they walk. While sharing is on, upload the last known position again
+  when the last upload is more than about two minutes old (the 20-second
+  location timer can do it); put the "is it time to send again" decision in a
+  small tested function. Found 2026-11-22.
+- [ ] **B17: a motion "in 5 min" is announced up to five minutes late.** Voting
+  always stays open for 10 minutes (`votingClosesAt: now + 10 min` in
+  `createMotion`), but the delay picker starts at 5 minutes. If one member does
+  not vote, the motion is decided only after 10 minutes, and "Motion time: Head
+  towards ..." is shown then, five minutes after the time everyone agreed on.
+  Close voting at the motion's own time when that is earlier than 10 minutes, as
+  a small tested function, and say the same in the "Voting closes ..." line. The
+  database function `close_expired_motions` only reads `voting_closes_at`, so it
+  needs no change. Found 2026-11-22.
+- [ ] **B18: the widget's custom button probably gets an empty name.**
+  `LobbyView.addManualDrink` adds the drink first and builds the custom button
+  afterwards from the form's name, but `addDrink` has already emptied the form by
+  then. The button is saved with the right volume and ABV and the name "", so
+  the "Custom button:" line shows no name and a drink added with it from the
+  Lock Screen has an empty name in the drink history. Read the name once before
+  adding the drink; build the preset in a small tested function that refuses an
+  empty name. Check on a device first (add a manual drink with "Use as widget
+  custom button" on, then look at the "Custom button:" line). Found 2026-11-22.
 
 ## 3. Code health
 
@@ -245,10 +288,20 @@ editor, then tick the line.
   anything else. The mapping should be a small function shared with the tests
   (the widget cannot see `UserFacingError` today; U2 left this open). Found
   2026-11-18. Done 2026-11-19.
-- [ ] **U9: the invite code is hidden while typing and has two names.** "Join
+- [x] **U9: the invite code is hidden while typing and has two names.** "Join
   Lobby" asks for the "Invite code" in a `SecureField`, and "Make Lobby" calls
   the same thing "Lobby password", also hidden. The code is then shown in plain
   text in the lobby header and sent to friends with the share button (U1), so
   hiding it protects nothing, and a typo while joining only shows up as "no
   lobby found". Use a normal text field (no autocorrection, no capitalisation)
-  on both screens and call it "Invite code" everywhere. Found 2026-11-20.
+  on both screens and call it "Invite code" everywhere. Found 2026-11-20. Done
+  2026-11-21.
+- [ ] **U10: invite codes only work in exactly the same capital and small
+  letters.** `joinLobby` looks the code up with an exact match, so a friend who
+  is told "beer" and types "Beer" (or the other way round) only sees "No active
+  lobby found for that invite code". Compare without regard to case when
+  joining and when "Make Lobby" checks that a code is free (`ilike`, with `%`,
+  `_` and `\` in the typed code escaped; the escaping is a small tested
+  function). Two existing lobbies whose codes differ only in case then both
+  match: keep the present "multiple lobbies share that invite code" message for
+  that. The lasting fix, generated codes, is part of S2. Found 2026-11-22.
