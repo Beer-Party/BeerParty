@@ -30,6 +30,6 @@
 - Found while doing this: `addManualDrink` builds the widget's custom button from
   the drink name after `addDrink` has already emptied the form, so the custom
   button probably gets an empty name. Not changed here (this pull request only
-  moves code); it is in today's backlog pull request as B19.
+  moves code); it is in today's backlog pull request as B18.
 - Next parts of Q2, one per run: the "Add Drink" section and the drink history
   as their own views, then the motions section.
