@@ -198,6 +198,11 @@ editor, then tick the line.
     unit tests.
   - [x] Part 4, 2026-11-20: choosing the graph point under a long press moved to
     `BACGraphInspection`, with unit tests.
+  - [x] Part 5, 2026-11-21: deciding a motion (voting over, passed, time to
+    announce it) moved to `MotionTally`, with unit tests.
+  - [x] Part 6, 2026-11-22: the text typed into the "Add Drink" form and the
+    "Edit Drink" sheet moved to `DrinkDraft`, with unit tests; the sheet is its
+    own view, `DrinkEditSheet`.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.

@@ -43,9 +43,7 @@ struct LobbyView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.scenePhase) private var scenePhase
 
-  @State private var drinkName: String = ""
-  @State private var volumeMl: String = ""
-  @State private var abv: String = ""
+  @State private var drinkDraft = DrinkDraft()
   @State private var statusMessage: String = ""
   @State private var isSubmitting: Bool = false
   @State private var isLoadingAnalytics: Bool = false
@@ -102,9 +100,7 @@ struct LobbyView: View {
   @State private var lobbyClosedAt: Date?
   @State private var isDrinkHistoryExpanded = false
   @State private var editingDrink: LobbyDrink?
-  @State private var editDrinkName: String = ""
-  @State private var editVolumeMl: String = ""
-  @State private var editAbv: String = ""
+  @State private var editDraft = DrinkDraft()
   @State private var isSavingDrinkEdit = false
   @State private var drinkMutationInFlightID: UUID?
   @State private var bacSnapshotCache = BACSnapshotCache()
@@ -473,20 +469,20 @@ struct LobbyView: View {
 
         if isLobbyActive {
           Section("Add Drink") {
-            TextField("Drink name", text: $drinkName)
+            TextField("Drink name", text: $drinkDraft.name)
               .textInputAutocapitalization(.words)
               .autocorrectionDisabled()
               .focused($focusedDrinkInput, equals: .drinkName)
 
-            TextField("Volume (ml)", text: $volumeMl)
+            TextField("Volume (ml)", text: $drinkDraft.volumeText)
               .keyboardType(.decimalPad)
               .focused($focusedDrinkInput, equals: .volume)
 
-            TextField("ABV (%)", text: $abv)
+            TextField("ABV (%)", text: $drinkDraft.abvText)
               .keyboardType(.decimalPad)
               .focused($focusedDrinkInput, equals: .abv)
 
-            if let addDrinkLimitMessage {
+            if let addDrinkLimitMessage = drinkDraft.limitMessage {
               Text(addDrinkLimitMessage)
                 .font(.footnote)
                 .foregroundStyle(.red)
@@ -497,7 +493,7 @@ struct LobbyView: View {
             Button(isSubmitting ? "Adding..." : "Add Drink") {
               Task { await addManualDrink() }
             }
-            .disabled(isSubmitting || !canAddManualDrink || addDrinkLimitMessage != nil || !isLobbyActive)
+            .disabled(isSubmitting || !drinkDraft.canSubmit || !isLobbyActive)
           }
 
           Section("Widget") {
@@ -727,52 +723,13 @@ struct LobbyView: View {
       Task { await refreshLockScreenAccessToken() }
     }
     .sheet(item: $editingDrink) { drink in
-      NavigationStack {
-        Form {
-          Section("Drink Details") {
-            TextField("Drink name", text: $editDrinkName)
-              .textInputAutocapitalization(.words)
-              .autocorrectionDisabled()
-
-            TextField("Volume (ml)", text: $editVolumeMl)
-              .keyboardType(.decimalPad)
-
-            TextField("ABV (%)", text: $editAbv)
-              .keyboardType(.decimalPad)
-
-            if let editDrinkLimitMessage {
-              Text(editDrinkLimitMessage)
-                .font(.footnote)
-                .foregroundStyle(.red)
-            }
-          }
-
-          Section {
-            Text("Drinks can be edited or deleted for 15 minutes after they are added.")
-              .font(.footnote)
-              .foregroundStyle(.secondary)
-          }
-        }
-        .navigationTitle("Edit Drink")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button("Cancel") {
-              editingDrink = nil
-            }
-            .disabled(isSavingDrinkEdit)
-          }
-
-          ToolbarItem(placement: .confirmationAction) {
-            Button(isSavingDrinkEdit ? "Saving..." : "Save") {
-              Task { await saveDrinkEdit(drink) }
-            }
-            .disabled(
-              isSavingDrinkEdit || !canSaveDrinkEdit || editDrinkLimitMessage != nil || !canModifyDrink(drink)
-            )
-          }
-        }
-      }
+      DrinkEditSheet(
+        draft: $editDraft,
+        isSaving: isSavingDrinkEdit,
+        canModify: canModifyDrink(drink),
+        onCancel: { editingDrink = nil },
+        onSave: { Task { await saveDrinkEdit(drink) } }
+      )
     }
     .scrollDismissesKeyboard(.interactively)
     .simultaneousGesture(
@@ -825,42 +782,6 @@ struct LobbyView: View {
     }
   }
 
-  private var trimmedDrinkName: String {
-    drinkName.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  private var canAddManualDrink: Bool {
-    !trimmedDrinkName.isEmpty && parsedVolumeMl != nil && parsedAbv != nil
-  }
-
-  private var trimmedEditDrinkName: String {
-    editDrinkName.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  private var canSaveDrinkEdit: Bool {
-    !trimmedEditDrinkName.isEmpty && parsedEditVolumeMl != nil && parsedEditAbv != nil
-  }
-
-  private var parsedVolumeMl: Double? {
-    guard let parsed = DecimalInput.parse(volumeMl), parsed > 0 else { return nil }
-    return parsed
-  }
-
-  private var parsedAbv: Double? {
-    guard let parsed = DecimalInput.parse(abv), parsed >= 0 else { return nil }
-    return parsed
-  }
-
-  private var parsedEditVolumeMl: Double? {
-    guard let parsed = DecimalInput.parse(editVolumeMl), parsed > 0 else { return nil }
-    return parsed
-  }
-
-  private var parsedEditAbv: Double? {
-    guard let parsed = DecimalInput.parse(editAbv), parsed >= 0 else { return nil }
-    return parsed
-  }
-
   private var visibleLocationRows: [MemberLocationData] {
     let staleCutoff = Date().addingTimeInterval(-5 * 60)
     return locationRows.filter { $0.updatedAt >= staleCutoff }
@@ -869,15 +790,6 @@ struct LobbyView: View {
   private var currentUserNickname: String? {
     guard let currentUserID else { return nil }
     return members.first(where: { $0.userId == currentUserID })?.nickname
-  }
-
-  // Why the typed volume or ABV is too large, or nil when it is fine.
-  private var addDrinkLimitMessage: String? {
-    DrinkInputLimits.message(volumeMl: parsedVolumeMl, abv: parsedAbv)
-  }
-
-  private var editDrinkLimitMessage: String? {
-    DrinkInputLimits.message(volumeMl: parsedEditVolumeMl, abv: parsedEditAbv)
   }
 
   private var currentUserDrinkHistory: [LobbyDrink] {
@@ -977,12 +889,12 @@ struct LobbyView: View {
   @MainActor
   // Validates manual inputs and forwards them to the shared add-drink flow.
   private func addManualDrink() async {
-    guard let parsedVolumeMl, let parsedAbv else { return }
-    let didInsert = await addDrink(name: trimmedDrinkName, volumeMl: parsedVolumeMl, abv: parsedAbv)
+    guard let parsedVolumeMl = drinkDraft.volumeMl, let parsedAbv = drinkDraft.abv else { return }
+    let didInsert = await addDrink(name: drinkDraft.trimmedName, volumeMl: parsedVolumeMl, abv: parsedAbv)
     if didInsert {
       let customPreset = QuickAddDrinkPreset(
         id: "custom",
-        name: trimmedDrinkName,
+        name: drinkDraft.trimmedName,
         volumeMl: parsedVolumeMl,
         abv: parsedAbv
       )
@@ -995,9 +907,7 @@ struct LobbyView: View {
   }
 
   private func beginEditingDrink(_ drink: LobbyDrink) {
-    editDrinkName = drink.name
-    editVolumeMl = String(format: "%.0f", drink.volumeMl)
-    editAbv = String(format: "%.1f", drink.abv)
+    editDraft = DrinkDraft(editing: drink)
     editingDrink = drink
   }
 
@@ -1008,7 +918,7 @@ struct LobbyView: View {
       editingDrink = nil
       return
     }
-    guard let parsedEditVolumeMl, let parsedEditAbv else { return }
+    guard let parsedEditVolumeMl = editDraft.volumeMl, let parsedEditAbv = editDraft.abv else { return }
 
     isSavingDrinkEdit = true
     statusMessage = ""
@@ -1018,7 +928,7 @@ struct LobbyView: View {
       let updatedDrink = try await backendCoordinator.updateDrink(
         lobbyID: lobbyID,
         drinkID: drink.id,
-        name: trimmedEditDrinkName,
+        name: editDraft.trimmedName,
         volumeMl: parsedEditVolumeMl,
         abv: parsedEditAbv
       )
@@ -1084,10 +994,8 @@ struct LobbyView: View {
       drinks.sort { $0.consumedAt < $1.consumedAt }
       lastDrinkCursor = drinks.map(\.consumedAt).max()
 
-      if name == trimmedDrinkName {
-        drinkName = ""
-        volumeMl = ""
-        abv = ""
+      if name == drinkDraft.trimmedName {
+        drinkDraft = DrinkDraft()
       }
       statusMessage = "Added \(name)."
       await syncCurrentUserBACIfNeeded(at: insertedDrink.consumedAt, force: true)
