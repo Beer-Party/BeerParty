@@ -616,57 +616,14 @@ struct LobbyView: View {
           }
         }
 
-        Section("Drink History") {
-          if currentUserDrinkHistory.isEmpty {
-            Text("No drinks logged yet.")
-              .foregroundStyle(.secondary)
-          } else {
-            DisclosureGroup(
-              isExpanded: $isDrinkHistoryExpanded,
-              content: {
-                ForEach(currentUserDrinkHistory) { drink in
-                  VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                      VStack(alignment: .leading, spacing: 2) {
-                        Text(drink.name)
-                          .font(.subheadline.weight(.semibold))
-                        Text("\(drink.volumeMl, specifier: "%.0f") ml • \(drink.abv, specifier: "%.1f")%")
-                          .font(.caption)
-                          .foregroundStyle(.secondary)
-                      }
-                      Spacer()
-                      Text(drink.consumedAt, format: .dateTime.hour().minute())
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    }
-
-                    if canModifyDrink(drink) {
-                      HStack(spacing: 12) {
-                        Button("Edit") {
-                          beginEditingDrink(drink)
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(drinkMutationInFlightID == drink.id)
-
-                        Button("Delete", role: .destructive) {
-                          Task { await deleteDrink(drink) }
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(drinkMutationInFlightID == drink.id)
-                      }
-                      .font(.caption.weight(.semibold))
-                    }
-                  }
-                  .padding(.vertical, 4)
-                }
-              },
-              label: {
-                Text("My Drinks Tonight (\(currentUserDrinkHistory.count))")
-                  .font(.headline)
-              }
-            )
-          }
-        }
+        DrinkHistorySection(
+          drinks: currentUserDrinkHistory,
+          isExpanded: $isDrinkHistoryExpanded,
+          busyDrinkID: drinkMutationInFlightID,
+          canModify: { canModifyDrink($0) },
+          onEdit: { beginEditingDrink($0) },
+          onDelete: { drink in Task { await deleteDrink(drink) } }
+        )
 
         if !statusMessage.isEmpty {
           Section {
@@ -793,10 +750,7 @@ struct LobbyView: View {
   }
 
   private var currentUserDrinkHistory: [LobbyDrink] {
-    guard let currentUserID else { return [] }
-    return drinks
-      .filter { $0.userId == currentUserID }
-      .sorted { $0.consumedAt > $1.consumedAt }
+    DrinkHistory.ownDrinks(in: drinks, userID: currentUserID)
   }
 
   private var currentUserIsCreator: Bool {
@@ -820,9 +774,7 @@ struct LobbyView: View {
   }
 
   private func canModifyDrink(_ drink: LobbyDrink) -> Bool {
-    guard isLobbyActive, currentUserID == drink.userId, !isSystemEvent(drink) else { return false }
-    let elapsed = now.timeIntervalSince(drink.consumedAt)
-    return elapsed >= 0 && elapsed <= 15 * 60
+    DrinkHistory.canModify(drink, currentUserID: currentUserID, isLobbyActive: isLobbyActive, now: now)
   }
 
   private func quickAddEmojiButton(_ emoji: String, action: @escaping () -> Void) -> some View {
