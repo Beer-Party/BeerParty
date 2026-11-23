@@ -27,6 +27,6 @@
   drink in one lobby; their BAC values now differ. In the Supabase table
   `lobby_member_bac_params` the two rows no longer both hold 40 and 0.14.
 - Not known from the repo (S1): whether the table's rules let a member update
-  their own row. The app already upserts into it, and a refused write is
-  ignored when a lobby loads, so the worst case is the old behaviour.
+  their own row. Rewriting a row that already exists is best effort (a
+  refused write is ignored), so the worst case is the old behaviour.
 - Backlog: ticks B15.

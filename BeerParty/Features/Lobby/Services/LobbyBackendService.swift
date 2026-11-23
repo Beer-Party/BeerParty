@@ -1180,10 +1180,19 @@ struct LobbyBackendService {
       updatedAt: Date()
     )
 
-    try await supabase
-      .from("lobby_member_bac_params")
-      .upsert(request, onConflict: "lobby_id,user_id")
-      .execute()
+    if existing.isEmpty {
+      try await supabase
+        .from("lobby_member_bac_params")
+        .upsert(request, onConflict: "lobby_id,user_id")
+        .execute()
+    } else {
+      // Correcting a row that is already there is best effort: joining or
+      // opening a lobby must not fail because of it.
+      _ = try? await supabase
+        .from("lobby_member_bac_params")
+        .upsert(request, onConflict: "lobby_id,user_id")
+        .execute()
+    }
   }
 
   private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
