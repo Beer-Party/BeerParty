@@ -301,7 +301,7 @@ editor, then tick the line.
   lobby found". Use a normal text field (no autocorrection, no capitalisation)
   on both screens and call it "Invite code" everywhere. Found 2026-11-20. Done
   2026-11-21.
-- [ ] **U10: invite codes only work in exactly the same capital and small
+- [x] **U10: invite codes only work in exactly the same capital and small
   letters.** `joinLobby` looks the code up with an exact match, so a friend who
   is told "beer" and types "Beer" (or the other way round) only sees "No active
   lobby found for that invite code". Compare without regard to case when
