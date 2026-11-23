@@ -207,7 +207,7 @@ editor, then tick the line.
   when the last upload is more than about two minutes old (the 20-second
   location timer can do it); put the "is it time to send again" decision in a
   small tested function. Found 2026-11-22.
-- [ ] **B17: a motion "in 5 min" is announced up to five minutes late.** Voting
+- [x] **B17: a motion "in 5 min" is announced up to five minutes late.** Voting
   always stays open for 10 minutes (`votingClosesAt: now + 10 min` in
   `createMotion`), but the delay picker starts at 5 minutes. If one member does
   not vote, the motion is decided only after 10 minutes, and "Motion time: Head
