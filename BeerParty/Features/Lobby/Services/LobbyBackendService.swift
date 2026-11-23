@@ -190,20 +190,24 @@ struct LobbyBackendService {
   // Joins the current user to the lobby identified by invite code and initializes member rows.
   func joinLobby(inviteCode: String, nickname: String) async throws -> LobbyDestination {
     let session = try await supabase.auth.session
-    let lobbyRows: [CreatedLobby] = try await supabase
+    // Capital and small letters do not matter: "Beer" finds the lobby "beer".
+    let lobbyRows: [LobbyJoinRow] = try await supabase
       .from("lobbies")
-      .select("id,name")
-      .eq("invite_code", value: inviteCode)
+      .select("id,name,invite_code")
+      .ilike("invite_code", pattern: LobbyInvite.caseInsensitivePattern(for: inviteCode))
       .eq("is_active", value: true)
-      .limit(2)
+      .limit(20)
       .execute()
       .value
 
-    guard !lobbyRows.isEmpty else {
+    let lobby: LobbyJoinRow
+    switch LobbyInvite.match(typed: inviteCode, among: lobbyRows.map(\.inviteCode)) {
+    case .none:
       throw LobbyJoinError.noActiveLobbyForInviteCode
-    }
-    guard lobbyRows.count == 1, let lobby = lobbyRows.first else {
+    case .several:
       throw LobbyJoinError.duplicateInviteCodes
+    case .one(let index):
+      lobby = lobbyRows[index]
     }
 
     let memberRequest = CreateLobbyMemberRequest(
@@ -310,14 +314,17 @@ struct LobbyBackendService {
     return LobbyDestination(lobbyID: created.id, lobbyName: created.name)
   }
 
+  // Lobbies whose code is the same apart from capital and small letters, so a
+  // new lobby cannot take "Beer" while "beer" exists.
   private func lobbiesHolding(inviteCode: String) async throws -> [LobbyCodeHolderRow] {
-    try await supabase
+    let rows: [LobbyCodeHolderRow] = try await supabase
       .from("lobbies")
-      .select("id,created_by")
-      .eq("invite_code", value: inviteCode)
-      .limit(5)
+      .select("id,created_by,invite_code")
+      .ilike("invite_code", pattern: LobbyInvite.caseInsensitivePattern(for: inviteCode))
+      .limit(20)
       .execute()
       .value
+    return rows.filter { LobbyInvite.isSameCode($0.inviteCode, inviteCode) }
   }
 
   private func hasNoMembers(lobbyID: UUID) async throws -> Bool {
@@ -1313,10 +1320,24 @@ private struct LobbyInviteCodeRow: Decodable {
 private struct LobbyCodeHolderRow: Decodable {
   let id: UUID
   let createdBy: UUID?
+  let inviteCode: String
 
   enum CodingKeys: String, CodingKey {
     case id
     case createdBy = "created_by"
+    case inviteCode = "invite_code"
+  }
+}
+
+private struct LobbyJoinRow: Decodable {
+  let id: UUID
+  let name: String
+  let inviteCode: String
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case name
+    case inviteCode = "invite_code"
   }
 }
 
