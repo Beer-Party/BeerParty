@@ -34,6 +34,10 @@ final class LocationTrackingService: NSObject, ObservableObject {
   func stopTracking() {
     manager.stopUpdatingLocation()
     wantsTracking = false
+    // The position is re-sent while sharing is on (LocationResend). Forget it
+    // here so a position from before sharing was switched off is never sent
+    // after it is switched on again; iOS gives a fresh one on start.
+    lastLocation = nil
   }
 
   // Starts or stops updates for the current permission. The permission callback

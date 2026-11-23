@@ -198,7 +198,7 @@ editor, then tick the line.
   none exists: also rewrite the user's own row when it differs from the derived
   values, which makes a changed weight count in lobbies joined earlier too. Found
   2026-11-22.
-- [ ] **B16: a member who stays in one place disappears from the map after five
+- [x] **B16: a member who stays in one place disappears from the map after five
   minutes.** `LocationTrackingService` reports a position only after 25 metres of
   movement (`distanceFilter = 25`), and the position is uploaded only then.
   `LobbyView.visibleLocationRows` hides every pin older than five minutes. A
