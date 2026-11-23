@@ -674,14 +674,15 @@ struct LobbyBackendService {
     let now = Date()
     let cleanTarget = targetText.trimmingCharacters(in: .whitespacesAndNewlines)
     let cleanNickname = proposerNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+    let targetAt = now.addingTimeInterval(TimeInterval(delayMinutes * 60))
     let request = CreateMotionRequest(
       lobbyId: lobbyID,
       createdBy: session.user.id,
       proposerNickname: cleanNickname.isEmpty ? "Member" : cleanNickname,
       targetText: cleanTarget,
       delayMinutes: delayMinutes,
-      targetAt: now.addingTimeInterval(TimeInterval(delayMinutes * 60)),
-      votingClosesAt: now.addingTimeInterval(10 * 60)
+      targetAt: targetAt,
+      votingClosesAt: MotionTally.votingClosesAt(createdAt: now, targetAt: targetAt)
     )
 
     let rows: [LobbyMotionRow] = try await supabase

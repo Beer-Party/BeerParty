@@ -7,6 +7,19 @@ enum MotionTally {
   /// A motion passes with more than this share of all members voting aye.
   static let passingShare = 2.0 / 3.0
 
+  /// How long voting stays open at most.
+  static let longestVotingWindow: TimeInterval = 10 * 60
+
+  /// When voting on a new motion closes: after ten minutes, or at the motion's
+  /// own time when that comes first. A motion "in 5 min" is then decided, and
+  /// announced, at its time and not five minutes late.
+  static func votingClosesAt(createdAt: Date, targetAt: Date) -> Date {
+    let latest = createdAt.addingTimeInterval(longestVotingWindow)
+    // A target in the past (a clock oddity) closes voting at once, not before
+    // the motion was made.
+    return max(createdAt, min(latest, targetAt))
+  }
+
   /// nil while voting is still open. Otherwise true when the motion passed.
   ///
   /// Voting is over when every member has voted or the voting time has run out.
