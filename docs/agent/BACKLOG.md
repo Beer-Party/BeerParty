@@ -216,7 +216,7 @@ editor, then tick the line.
   a small tested function, and say the same in the "Voting closes ..." line. The
   database function `close_expired_motions` only reads `voting_closes_at`, so it
   needs no change. Found 2026-11-22.
-- [ ] **B18: the widget's custom button probably gets an empty name.**
+- [x] **B18: the widget's custom button probably gets an empty name.**
   `LobbyView.addManualDrink` adds the drink first and builds the custom button
   afterwards from the form's name, but `addDrink` has already emptied the form by
   then. The button is saved with the right volume and ABV and the name "", so

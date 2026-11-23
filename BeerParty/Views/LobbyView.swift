@@ -894,20 +894,15 @@ struct LobbyView: View {
   // Validates manual inputs and forwards them to the shared add-drink flow.
   private func addManualDrink() async {
     guard let parsedVolumeMl = drinkDraft.volumeMl, let parsedAbv = drinkDraft.abv else { return }
-    let didInsert = await addDrink(name: drinkDraft.trimmedName, volumeMl: parsedVolumeMl, abv: parsedAbv)
-    if didInsert {
-      let customPreset = QuickAddDrinkPreset(
-        id: "custom",
-        name: drinkDraft.trimmedName,
-        volumeMl: parsedVolumeMl,
-        abv: parsedAbv
-      )
-      if shouldUseManualDrinkAsWidgetCustom {
-        lastCustomPreset = customPreset
-        liveActivityService.saveCustomPreset(customPreset, lobbyID: lobbyID)
-        syncLiveActivityContext()
-      }
-    }
+    // Read the name before adding: addDrink empties the form when it succeeds.
+    let drinkName = drinkDraft.trimmedName
+    let didInsert = await addDrink(name: drinkName, volumeMl: parsedVolumeMl, abv: parsedAbv)
+    guard didInsert, shouldUseManualDrinkAsWidgetCustom,
+          let customPreset = QuickAddDrinkPreset.custom(name: drinkName, volumeMl: parsedVolumeMl, abv: parsedAbv)
+    else { return }
+    lastCustomPreset = customPreset
+    liveActivityService.saveCustomPreset(customPreset, lobbyID: lobbyID)
+    syncLiveActivityContext()
   }
 
   private func beginEditingDrink(_ drink: LobbyDrink) {
