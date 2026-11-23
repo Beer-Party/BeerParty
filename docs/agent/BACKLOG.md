@@ -184,7 +184,7 @@ editor, then tick the line.
   depends on the bucket's rules, which are not in the repo (S1). Found
   2026-11-20. Done 2026-11-21; whether the old file is really removed needs a
   check in the Supabase storage browser.
-- [ ] **B15: everyone's BAC is worked out with the same body values, whatever
+- [x] **B15: everyone's BAC is worked out with the same body values, whatever
   their weight and gender.** `ensureCurrentUserBACParams` in
   `LobbyBackendService` asks for `id,weight,age,gender` and decodes the answer as
   `UserProfile`. That type also requires `share_location_foreground` and

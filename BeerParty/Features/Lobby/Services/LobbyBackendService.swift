@@ -1129,7 +1129,10 @@ struct LobbyBackendService {
     )
   }
 
-  // Ensures the current user has derived BAC parameters saved for this lobby.
+  // Saves the current user's BAC parameters for this lobby, worked out from the
+  // profile. A row that is already there is rewritten when it differs (the
+  // fallback saved by older versions, or a weight changed since), so the values
+  // also count in lobbies joined earlier.
   private func ensureCurrentUserBACParams(lobbyID: UUID, userID: UUID) async throws {
     let existing: [LobbyBACParamsRow] = try await supabase
       .from("lobby_member_bac_params")
@@ -1140,27 +1143,35 @@ struct LobbyBackendService {
       .execute()
       .value
 
-    if !existing.isEmpty {
-      return
-    }
-
     let derived: LobbyBACParamsData
     do {
-      let profile: UserProfile = try await supabase
+      let profile: BACProfileFields = try await supabase
         .from("profiles")
         .select("id,weight,age,gender")
         .eq("id", value: userID)
         .single()
         .execute()
         .value
-      derived = deriveBACParametersFromProfile(profile)
+      derived = BACBodyParameters.derive(from: profile)
     } catch {
-      derived = LobbyBACParamsData(
-        userId: userID,
-        tbw: 40,
-        eliminationPerHourPromille: 0.14
-      )
+      // The profile could not be read. Keep a row that is already saved; only a
+      // member with no row at all gets the fallback, and the next successful
+      // read replaces it.
+      if !existing.isEmpty {
+        return
+      }
+      derived = BACBodyParameters.fallback(userID: userID)
     }
+
+    if let saved = existing.first,
+       !BACBodyParameters.needsSaving(
+         savedTBW: saved.tbw,
+         savedEliminationPerHourPromille: saved.elimRate,
+         derived: derived
+       ) {
+      return
+    }
+
     let request = UpsertLobbyBACParamsRequest(
       lobbyId: lobbyID,
       userId: userID,
@@ -1173,33 +1184,6 @@ struct LobbyBackendService {
       .from("lobby_member_bac_params")
       .upsert(request, onConflict: "lobby_id,user_id")
       .execute()
-  }
-
-  // Derives TBW and elimination rate from profile fields once per user/lobby.
-  private func deriveBACParametersFromProfile(_ profile: UserProfile) -> LobbyBACParamsData {
-    let weightKg = max(40, profile.weight / 2.20462)
-    let age = max(18, profile.age)
-    let gender = profile.gender.lowercased()
-
-    if gender.contains("female") {
-      return LobbyBACParamsData(
-        userId: profile.id,
-        tbw: max(20, 14.46 + 0.2549 * weightKg),
-        eliminationPerHourPromille: 0.15
-      )
-    }
-    if gender.contains("male") {
-      return LobbyBACParamsData(
-        userId: profile.id,
-        tbw: max(20, 20.03 - 0.1183 * Double(age) + 0.3626 * weightKg),
-        eliminationPerHourPromille: 0.13
-      )
-    }
-    return LobbyBACParamsData(
-      userId: profile.id,
-      tbw: max(20, 17.25 + 0.308 * weightKg),
-      eliminationPerHourPromille: 0.14
-    )
   }
 
   private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
