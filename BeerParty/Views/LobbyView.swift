@@ -79,6 +79,7 @@ struct LobbyView: View {
   @State private var currentUserShareBackground = false
   @State private var hasCenteredMap = false
   @State private var hasEndedLocationSharing = false
+  @State private var lastOwnLocationUploadAt: Date?
   @State private var lockScreenAccessToken: String?
   @State private var lastCustomPreset: QuickAddDrinkPreset?
   @State private var isQuickAddWidgetEnabled = false
@@ -759,7 +760,10 @@ struct LobbyView: View {
         endLocationSharing()
         return
       }
-      Task { await refreshMemberLocations() }
+      Task {
+        await resendOwnLocationIfDue()
+        await refreshMemberLocations()
+      }
     }
     .onReceive(drinkReloadTimer) { _ in
       Task { await reloadAllDrinksIfNeeded() }
@@ -1422,22 +1426,43 @@ struct LobbyView: View {
   }
 
   @MainActor
-  private func handleOwnLocationUpdate(_ location: CLLocation) async {
+  private func handleOwnLocationUpdate(_ location: CLLocation, reportsFailure: Bool = true) async {
     guard currentUserShareForeground, !hasEndedLocationSharing, shouldContinueLiveUpdates else { return }
     guard let currentUserID else { return }
 
     do {
+      let uploadedAt = Date()
       try await backendCoordinator.upsertMemberLocation(
         lobbyID: lobbyID,
         userID: currentUserID,
         lat: location.coordinate.latitude,
         lng: location.coordinate.longitude,
-        timestamp: Date()
+        timestamp: uploadedAt
       )
+      lastOwnLocationUploadAt = uploadedAt
       await refreshMemberLocations()
     } catch {
-      statusMessage = UserFacingError.message(couldNot: "share your location", error: error)
+      if reportsFailure {
+        statusMessage = UserFacingError.message(couldNot: "share your location", error: error)
+      }
     }
+  }
+
+  // iOS reports a position only after 25 metres of movement, and the map hides
+  // pins older than five minutes. Sends the last known position again so a
+  // member who stays in one place stays on the map. A failed send is tried
+  // again on the next timer tick, without a message.
+  @MainActor
+  private func resendOwnLocationIfDue() async {
+    let lastLocation = locationTrackingService.lastLocation
+    guard LocationResend.isDue(
+      isSharing: currentUserShareForeground && !hasEndedLocationSharing && shouldContinueLiveUpdates,
+      hasLocation: lastLocation != nil,
+      lastUploadAt: lastOwnLocationUploadAt,
+      now: Date()
+    ), let lastLocation else { return }
+
+    await handleOwnLocationUpdate(lastLocation, reportsFailure: false)
   }
 
   @MainActor
