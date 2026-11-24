@@ -32,12 +32,6 @@ struct LobbyView: View {
     }
   }
 
-  private enum DrinkInputField: Hashable {
-    case drinkName
-    case volume
-    case abv
-  }
-
   let lobbyID: UUID
   let lobbyName: String
   @Environment(\.dismiss) private var dismiss
@@ -469,51 +463,19 @@ struct LobbyView: View {
         }
 
         if isLobbyActive {
-          Section("Add Drink") {
-            TextField("Drink name", text: $drinkDraft.name)
-              .textInputAutocapitalization(.words)
-              .autocorrectionDisabled()
-              .focused($focusedDrinkInput, equals: .drinkName)
+          AddDrinkSection(
+            draft: $drinkDraft,
+            usesDrinkAsWidgetCustomButton: $shouldUseManualDrinkAsWidgetCustom,
+            focusedField: $focusedDrinkInput,
+            isSubmitting: isSubmitting,
+            onAdd: { Task { await addManualDrink() } }
+          )
 
-            TextField("Volume (ml)", text: $drinkDraft.volumeText)
-              .keyboardType(.decimalPad)
-              .focused($focusedDrinkInput, equals: .volume)
-
-            TextField("ABV (%)", text: $drinkDraft.abvText)
-              .keyboardType(.decimalPad)
-              .focused($focusedDrinkInput, equals: .abv)
-
-            if let addDrinkLimitMessage = drinkDraft.limitMessage {
-              Text(addDrinkLimitMessage)
-                .font(.footnote)
-                .foregroundStyle(.red)
-            }
-
-            Toggle("Use as widget custom button", isOn: $shouldUseManualDrinkAsWidgetCustom)
-
-            Button(isSubmitting ? "Adding..." : "Add Drink") {
-              Task { await addManualDrink() }
-            }
-            .disabled(isSubmitting || !drinkDraft.canSubmit || !isLobbyActive)
-          }
-
-          Section("Widget") {
-            Toggle("Lock Screen Quick Add", isOn: $isQuickAddWidgetEnabled)
-              .disabled(!isLobbyActive)
-              .onChange(of: isQuickAddWidgetEnabled) { _, enabled in
-                Task { await setQuickAddWidgetEnabled(enabled) }
-              }
-
-            if let lastCustomPreset {
-              Text("Custom button: \(lastCustomPreset.name) • \(lastCustomPreset.volumeMl, specifier: "%.0f") ml • \(lastCustomPreset.abv, specifier: "%.1f")%")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            } else {
-              Text("Add a manual drink with “Use as widget custom button” enabled to show a fifth widget button.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            }
-          }
+          QuickAddWidgetSection(
+            isEnabled: $isQuickAddWidgetEnabled,
+            customPreset: lastCustomPreset,
+            onEnabledChange: { enabled in Task { await setQuickAddWidgetEnabled(enabled) } }
+          )
         }
 
         Section("Lobby Actions") {

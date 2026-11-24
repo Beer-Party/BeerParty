@@ -286,6 +286,9 @@ editor, then tick the line.
   - [x] Part 7, 2026-11-23: the "Drink History" section is its own view,
     `DrinkHistorySection`; which drinks it lists and which can still be changed
     moved to `DrinkHistory`, with unit tests.
+  - [x] Part 8, 2026-11-24: the "Add Drink" and "Widget" sections are their own
+    views, `AddDrinkSection` and `QuickAddWidgetSection`. View code only, so no
+    new unit tests.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.
