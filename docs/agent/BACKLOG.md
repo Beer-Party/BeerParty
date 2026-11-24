@@ -225,6 +225,43 @@ editor, then tick the line.
   adding the drink; build the preset in a small tested function that refuses an
   empty name. Check on a device first (add a manual drink with "Use as widget
   custom button" on, then look at the "Custom button:" line). Found 2026-11-22.
+- [ ] **B19: the graph of a past lobby runs all the way to today.**
+  `BACCalculator.snapshot` simulates every member from the lobby's first drink
+  up to the current time, also when the lobby closed days ago
+  (`loadLobbyAnalytics` sets `now = Date()` for a closed lobby too). Opening
+  last week's lobby from "Your Lobbies" shows a graph one week wide with the
+  whole evening squeezed into its left edge, and "2h" and "5h" show only flat
+  lines at zero. The work also grows with the lobby's age (one step per ten
+  minutes, per member, per drink) and is redone on the main thread every 30
+  seconds. End the graph where it stops changing: the time of the last drink
+  plus the time until everyone is back at zero, never later than now. Put that
+  end time in a small tested function. Found 2026-11-24.
+- [ ] **B20: a lobby the host deleted stays open on everyone else's phone.**
+  When the creator taps "Delete Lobby", the other members' lobby screens are not
+  told. `refreshLobbyActivityStatus` gets `lobbyNotFound` and ignores it as a
+  passing failure, so the screen keeps saying "Status: Active"; the member list
+  can then empty ("No members found in this lobby.") and every "Add Drink"
+  fails with "Lobby not found." The Lock Screen buttons are worse off: the widget's
+  check reads an empty answer as "unknown" (`LobbyOpenState.from`), tries the
+  drink anyway and says "Please try again." every time. Treat "the lobby row is
+  gone" as its own case: in the app, end quick add and location sharing, say
+  "This lobby was deleted by its host." and go back to the hub; in the widget,
+  end the Live Activity as for a closed lobby. The decision ("open", "closed",
+  "gone", "unknown") extends the tested `LobbyOpenState`. Found 2026-11-24.
+- [ ] **B21: a member's changed body values or nickname never reach the other
+  phones.** `refreshMembersIfNeeded` reloads the member list and the BAC values
+  only when the set of member ids changes (`LobbyRoster.needsReload`). Since B15
+  a member's values in `lobby_member_bac_params` are rewritten when their
+  profile weight changes, and a member who joins again with the invite code
+  gets a new nickname, but the set of ids stays the same, so everybody else
+  keeps calculating that member's BAC with the old values (and shows the old
+  name) until they pull to refresh. The same happens when a phone polls in the
+  moment between a new member's `lobby_members` row and their BAC row: it then
+  uses the fallback values for that member for the rest of the night. Reload
+  the roster on a slow cycle as well (the two-minute drink reload can do it),
+  and at once when a shown member has no BAC values; keep "does the roster
+  differ" as a tested function that also compares nicknames and values. Found
+  2026-11-24.
 
 ## 3. Code health
 
@@ -313,3 +350,25 @@ editor, then tick the line.
   function). Two existing lobbies whose codes differ only in case then both
   match: keep the present "multiple lobbies share that invite code" message for
   that. The lasting fix, generated codes, is part of S2. Found 2026-11-22.
+- [ ] **U11: the weight field always starts in pounds.** `ProfileSetupView`
+  sets `selectedWeightUnit = .pounds` for everyone and shows "Weight (lbs)". A
+  new user in Europe who types 75 without noticing the unit is saved as 75 lbs
+  (34 kg). Since B15 the weight really is used, so that user's BAC comes out
+  too high (the maths has a floor of 40 kg; for a 75 kg person that is about
+  40 % above the right value).
+  "Edit Profile" also shows a weight entered in kilograms converted to pounds
+  each time. Start with the unit of the phone's region (`Locale.current
+  .measurementSystem`: kilograms unless it is US or UK), as a small tested
+  function, and show the saved weight in that unit. Nothing changes in the
+  database: the weight is still stored in pounds. Found 2026-11-24.
+- [ ] **U12: "Made it home" stops working at closing time.** The button is
+  disabled when the lobby is closed, and `sendMadeItHome` refuses as well. But
+  the host normally taps "Closing Time" when the group leaves the bar, which is
+  just before people walk home and want to say they arrived. The other phones
+  would still show the message: they keep reading new rows for five hours
+  after closing (`shouldContinueLiveUpdates`). Allow "Made it home" during
+  those five hours (the rule for "can still be sent" as a small tested
+  function, shared by the button and the service). The `lobby_events`
+  migration (B5 step 1, not applied yet) only allows `made_it_home` rows in an
+  open lobby; ship a new migration file that relaxes that rule to the same
+  five hours, for an owner to apply together with step 2. Found 2026-11-24.
