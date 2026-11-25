@@ -1101,7 +1101,10 @@ struct LobbyView: View {
     guard !isLobbyGone, !isLifecycleActionLoading else { return }
     isLobbyGone = true
     isLobbyActive = false
-    liveActivityService.endContext()
+    // Only when the Lock Screen buttons belong to this lobby, not to another one.
+    if liveActivityService.activeContext()?.lobbyID == lobbyID {
+      liveActivityService.endContext()
+    }
     isQuickAddWidgetEnabled = false
     endLocationSharing()
     editingDrink = nil
