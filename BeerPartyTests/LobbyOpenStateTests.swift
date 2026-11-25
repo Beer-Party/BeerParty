@@ -51,9 +51,21 @@ final class LobbyOpenStateTests: XCTestCase {
     XCTAssertEqual(state(json: #"[{"is_active":true,"created_at":"yesterday"}]"#), .open)
   }
 
-  // No answer must never block a drink: the insert then succeeds or fails as before.
-  func testNoRowIsUnknown() {
-    XCTAssertEqual(state(json: "[]"), .unknown)
+  // The request worked and there is no such lobby any more: its host deleted it.
+  func testNoRowMeansTheLobbyIsGone() {
+    XCTAssertEqual(state(json: "[]"), .gone)
+    XCTAssertEqual(state(status: 206, json: "[]"), .gone)
+  }
+
+  // No answer must never block a drink: the insert then succeeds or fails as
+  // before. An empty list in a failed reply is not "gone".
+  func testNoRowInAFailedReplyIsUnknown() {
+    XCTAssertEqual(state(status: 401, json: "[]"), .unknown)
+    XCTAssertEqual(state(status: 503, json: "[]"), .unknown)
+  }
+
+  func testGoneMessageNamesTheHost() {
+    XCTAssertEqual(LobbyOpenState.goneMessage, "This lobby was deleted by its host.")
   }
 
   func testErrorStatusIsUnknown() {

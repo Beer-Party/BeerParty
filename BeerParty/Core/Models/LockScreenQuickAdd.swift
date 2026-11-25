@@ -83,8 +83,12 @@ struct LobbyQuickAddContext: Codable {
 enum LobbyOpenState: Equatable {
   case open
   case closed
-  /// No answer: offline, sign-in expired, or the lobby row was not returned.
+  /// The request worked and returned no lobby: its host deleted it.
+  case gone
+  /// No answer: offline, sign-in expired, or a reply that could not be read.
   case unknown
+
+  static let goneMessage = "This lobby was deleted by its host."
 
   /// The app closes a lobby the next time it is opened after this long.
   static let maximumOpenDuration: TimeInterval = 24 * 3600
@@ -93,11 +97,12 @@ enum LobbyOpenState: Equatable {
   /// `GET /rest/v1/lobbies?select=is_active,created_at&id=eq.<lobby id>`.
   static func from(statusCode: Int, body: Data, now: Date) -> LobbyOpenState {
     guard (200..<300).contains(statusCode),
-          let rows = try? JSONDecoder().decode([Row].self, from: body),
-          let row = rows.first
+          let rows = try? JSONDecoder().decode([Row].self, from: body)
     else {
       return .unknown
     }
+
+    guard let row = rows.first else { return .gone }
 
     guard row.isActive else { return .closed }
 

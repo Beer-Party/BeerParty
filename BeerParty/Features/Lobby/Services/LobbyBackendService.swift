@@ -42,6 +42,14 @@ enum LobbyLifecycleError: LocalizedError {
       return "Could not close lobby due to backend permissions."
     }
   }
+
+  /// True when a request found that the lobby row no longer exists, which
+  /// means its host deleted the lobby. A failed request (offline, timeout) is
+  /// a different error and is not "gone".
+  static func meansLobbyIsGone(_ error: Error) -> Bool {
+    guard let lifecycleError = error as? LobbyLifecycleError else { return false }
+    return lifecycleError == .lobbyNotFound
+  }
 }
 
 enum DrinkMutationError: LocalizedError {

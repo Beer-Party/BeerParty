@@ -236,7 +236,7 @@ editor, then tick the line.
   seconds. End the graph where it stops changing: the time of the last drink
   plus the time until everyone is back at zero, never later than now. Put that
   end time in a small tested function. Found 2026-11-24.
-- [ ] **B20: a lobby the host deleted stays open on everyone else's phone.**
+- [x] **B20: a lobby the host deleted stays open on everyone else's phone.**
   When the creator taps "Delete Lobby", the other members' lobby screens are not
   told. `refreshLobbyActivityStatus` gets `lobbyNotFound` and ignores it as a
   passing failure, so the screen keeps saying "Status: Active"; the member list
