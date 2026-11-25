@@ -113,7 +113,6 @@ struct LobbyView: View {
     GridItem(.flexible(), spacing: 12),
     GridItem(.flexible(), spacing: 12)
   ]
-  private let motionDelayOptions = Array(stride(from: 5, through: 45, by: 5))
 
   // Renders the lobby UI, including live BAC, chart, and drink entry controls.
   var body: some View {
@@ -519,65 +518,16 @@ struct LobbyView: View {
           .listRowBackground(Color.clear)
         }
 
-        Section("Motions") {
-          if !isLobbyActive {
-            Text("Lobby is closed. New motions are disabled.")
-              .foregroundStyle(.secondary)
-          } else {
-            TextField("Motion towards...", text: $motionTargetText)
-              .textInputAutocapitalization(.sentences)
-              .autocorrectionDisabled()
-
-            Picker("In", selection: $motionDelayMinutes) {
-              ForEach(motionDelayOptions, id: \.self) { minutes in
-                Text("\(minutes) min").tag(minutes)
-              }
-            }
-
-            Button(isCreatingMotion ? "Creating..." : "Create Motion") {
-              Task { await createMotion() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.indigo)
-            .disabled(isCreatingMotion || motionTargetText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || activeMotion != nil)
-
-            if activeMotion != nil {
-              Text("One active motion at a time.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            }
-          }
-
-          let closedMotions = motions.filter { !$0.isActive }
-          if closedMotions.isEmpty {
-            Text("No past motions yet.")
-              .foregroundStyle(.secondary)
-          } else {
-            DisclosureGroup(isExpanded: $isPastMotionsExpanded) {
-              ForEach(closedMotions) { motion in
-                VStack(alignment: .leading, spacing: 4) {
-                  Text("Towards \(motion.targetText) in \(motion.delayMinutes) min")
-                    .font(.subheadline.weight(.semibold))
-                  Text("Aye \(motion.ayeCount) • Neigh \(motion.neighCount)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                  if let passed = motion.passed {
-                    Text(passed ? "Passed" : "Did not pass")
-                      .font(.caption.weight(.semibold))
-                      .foregroundStyle(passed ? .green : .red)
-                  }
-                  Text(motion.createdAt, format: .dateTime.hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-              }
-            } label: {
-              Text("Past Motions (\(closedMotions.count))")
-                .font(.headline)
-            }
-          }
-        }
+        MotionsSection(
+          isLobbyActive: isLobbyActive,
+          targetText: $motionTargetText,
+          delayMinutes: $motionDelayMinutes,
+          isCreating: isCreatingMotion,
+          hasActiveMotion: activeMotion != nil,
+          pastMotions: motions.filter { !$0.isActive },
+          isPastExpanded: $isPastMotionsExpanded,
+          onCreate: { Task { await createMotion() } }
+        )
 
         DrinkHistorySection(
           drinks: currentUserDrinkHistory,
