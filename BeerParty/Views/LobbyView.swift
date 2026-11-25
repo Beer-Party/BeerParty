@@ -205,23 +205,14 @@ struct LobbyView: View {
           }
         }
 
-        Section("Live BAC") {
-          if isLoadingAnalytics {
-            ProgressView("Loading lobby drinks...")
-          } else if snapshot.current.isEmpty {
-            Text("No members found in this lobby.")
-              .foregroundStyle(.secondary)
-          } else {
-            ForEach(snapshot.current) { member in
-              HStack {
-                Text(member.nickname)
-                Spacer()
-                Text("\(member.bac, specifier: "%.2f")‰")
-                  .monospacedDigit()
-              }
-            }
-          }
-        }
+        LiveBACSection(
+          isLoading: isLoadingAnalytics,
+          rows: LiveBACRows.rows(
+            current: snapshot.current,
+            members: members,
+            currentUserID: currentUserID
+          )
+        )
 
         Section("Buddy") {
           if snapshot.current.count <= 1 {
