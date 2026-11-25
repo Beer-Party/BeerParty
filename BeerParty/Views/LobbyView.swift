@@ -685,7 +685,10 @@ struct LobbyView: View {
       }
     }
     .onReceive(drinkReloadTimer) { _ in
-      Task { await reloadAllDrinksIfNeeded() }
+      Task {
+        await reloadAllDrinksIfNeeded()
+        await reloadRosterIfChanged()
+      }
     }
     .onChange(of: members.map(\.userId)) { _, ids in
       if let selectedBuddyID, !ids.contains(selectedBuddyID) {
@@ -971,8 +974,9 @@ struct LobbyView: View {
     }
   }
 
-  // Picks up members who joined or left since the last full load. The member list
-  // is reloaded only when the set of members has actually changed.
+  // Picks up members who joined or left since the last full load, and members
+  // whose BAC values were not there yet. Changed nicknames and values of the
+  // same members come with the slower reload below.
   @MainActor
   private func refreshMembersIfNeeded() async {
     guard shouldContinueLiveUpdates else { return }
@@ -981,9 +985,30 @@ struct LobbyView: View {
       guard LobbyRoster.needsReload(
         shownMemberIDs: members.map(\.userId),
         latestMemberIDs: latestMemberIDs
+      ) || LobbyRoster.hasMemberWithoutBACValues(
+        memberIDs: latestMemberIDs,
+        paramsByUserId: bacParamsByUserId
       ) else { return }
 
+      await reloadRosterIfChanged()
+    } catch {
+      // Ignore periodic refresh failures; manual refresh still reloads everything.
+    }
+  }
+
+  // Every two minutes, and when the check above asks for it: reloads members and
+  // BAC values, so a member's new weight or nickname reaches this phone. The
+  // screen is only updated when something differs.
+  @MainActor
+  private func reloadRosterIfChanged() async {
+    guard shouldContinueLiveUpdates else { return }
+    do {
       let roster = try await backendCoordinator.fetchLobbyRoster(lobbyID: lobbyID)
+      guard LobbyRoster.differs(
+        shownMembers: members,
+        shownParamsByUserId: bacParamsByUserId,
+        latest: roster
+      ) else { return }
       members = roster.members
       bacParamsByUserId = roster.bacParamsByUserId
     } catch {

@@ -76,6 +76,32 @@ struct LobbyRoster {
   static func needsReload(shownMemberIDs: [UUID], latestMemberIDs: [UUID]) -> Bool {
     Set(shownMemberIDs) != Set(latestMemberIDs)
   }
+
+  /// True when a member has no BAC values yet. That happens when the list was
+  /// read between a new member's `lobby_members` row and their BAC row; without
+  /// another read their BAC would use the fallback values all night.
+  static func hasMemberWithoutBACValues(
+    memberIDs: [UUID],
+    paramsByUserId: [UUID: LobbyBACParamsData]
+  ) -> Bool {
+    memberIDs.contains { paramsByUserId[$0] == nil }
+  }
+
+  /// True when a freshly loaded roster differs from the one on screen in
+  /// anything that is shown or used: members, nicknames, photos or BAC values.
+  /// The order in which the server returns the members does not count.
+  static func differs(
+    shownMembers: [LobbyMemberData],
+    shownParamsByUserId: [UUID: LobbyBACParamsData],
+    latest: LobbyRoster
+  ) -> Bool {
+    sortedByID(shownMembers) != sortedByID(latest.members)
+      || shownParamsByUserId != latest.bacParamsByUserId
+  }
+
+  private static func sortedByID(_ members: [LobbyMemberData]) -> [LobbyMemberData] {
+    members.sorted { $0.userId.uuidString < $1.userId.uuidString }
+  }
 }
 
 struct LobbyMemberData: Identifiable, Equatable {
