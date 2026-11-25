@@ -642,9 +642,11 @@ struct LobbyBackendService {
   }
 
   // Writes a "made it home" event as a zero-alcohol marker that all lobby members can receive.
-  func sendMadeItHome(lobbyID: UUID, nickname: String) async throws {
+  // Also allowed for 5 hours after closing time (`MadeItHomeWindow`); `closedAt`
+  // is when the lobby closed, as far as the lobby screen knows.
+  func sendMadeItHome(lobbyID: UUID, nickname: String, closedAt: Date?) async throws {
     let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
-    guard meta.isActive else {
+    guard MadeItHomeWindow.canSend(isLobbyActive: meta.isActive, closedAt: closedAt, now: Date()) else {
       throw LobbyLifecycleError.lobbyClosed
     }
 

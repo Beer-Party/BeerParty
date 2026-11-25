@@ -101,7 +101,9 @@ editor, then tick the line.
   `lobby_events` table (migration + client, split over several PRs).
   - [x] Step 1, 2026-11-15: the table and its rules, as
     `supabase/migrations/20261115110000_create_lobby_events.sql`.
-  - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor.
+  - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor, then
+    `20261125110000_allow_made_it_home_after_closing.sql` (U12) once it is
+    merged.
   - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
     reads the old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
@@ -375,3 +377,7 @@ editor, then tick the line.
   migration (B5 step 1, not applied yet) only allows `made_it_home` rows in an
   open lobby; ship a new migration file that relaxes that rule to the same
   five hours, for an owner to apply together with step 2. Found 2026-11-24.
+  Done 2026-11-25 in the pull request that adds
+  `20261125110000_allow_made_it_home_after_closing.sql`; the box is left
+  unticked there only because #53 changes the line right above it. Tick it
+  when merging.
