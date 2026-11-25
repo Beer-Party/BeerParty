@@ -69,6 +69,10 @@ struct MakeLobbyView: View {
         }
       }
       .navigationTitle("Make Lobby")
+      .onAppear {
+        // Most people use the same nickname every time.
+        nickname = LastNickname.prefill(current: nickname, saved: LastNickname.load())
+      }
     }
   }
 
@@ -100,6 +104,7 @@ struct MakeLobbyView: View {
         inviteCode: trimmedInviteCode,
         nickname: trimmedNickname
       )
+      LastNickname.save(trimmedNickname)
       onCreated(destination)
       dismiss()
     } catch {
