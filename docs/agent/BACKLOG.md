@@ -225,7 +225,7 @@ editor, then tick the line.
   adding the drink; build the preset in a small tested function that refuses an
   empty name. Check on a device first (add a manual drink with "Use as widget
   custom button" on, then look at the "Custom button:" line). Found 2026-11-22.
-- [ ] **B19: the graph of a past lobby runs all the way to today.**
+- [x] **B19: the graph of a past lobby runs all the way to today.**
   `BACCalculator.snapshot` simulates every member from the lobby's first drink
   up to the current time, also when the lobby closed days ago
   (`loadLobbyAnalytics` sets `now = Date()` for a closed lobby too). Opening
