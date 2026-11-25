@@ -262,6 +262,40 @@ editor, then tick the line.
   and at once when a shown member has no BAC values; keep "does the roster
   differ" as a tested function that also compares nicknames and values. Found
   2026-11-24.
+- [ ] **B22: the Lock Screen vote buttons stay after voting, and still vote
+  when the motion is over.** `CastMotionVoteIntent` sends the vote and says
+  "Aye vote submitted.", but changes neither the saved quick-add context nor
+  the Live Activity, so "Aye" and "Neigh" stay on the Lock Screen. A second tap
+  silently changes the vote (the vote is an upsert). On a locked phone the
+  buttons also stay after the motion has been decided, because only an open
+  lobby screen updates them (`syncLiveActivityContext`), and a tap then writes
+  a vote for a closed motion and still says "submitted". After a successful
+  vote, save `shouldShowMotionVote = false` in the context and update the
+  activity's content state; before voting, read the motion's `status` (one
+  request, as `lobbyOpenState` does for drinks) and say "Voting on this motion
+  is over." when it is closed. The reading of that answer should be a small
+  tested function next to `LobbyOpenState`. Found 2026-11-25.
+- [ ] **B23: the profile accepts any weight and age.** `ProfileSetupView`
+  only checks weight > 0 and age > 0. A slip such as 750 instead of 75 kg is
+  saved, and since B15 it is really used: that member's BAC comes out about
+  ten times too low on every phone in the lobby (the maths has a floor of 40
+  kg but no ceiling). Age 400 is accepted as well. Reject weights outside
+  about 30 to 300 kg (in the unit shown) and ages above 120, with a short line
+  under the field, as a small tested function like `DrinkInputLimits`.
+  Whether there should be a minimum age (the legal drinking age differs by
+  country) is an owner decision and not part of this item. Found 2026-11-25.
+- [ ] **B24: background failures put an error on the screen every few
+  minutes.** `syncCurrentUserBACIfNeeded` writes "Couldn't update your BAC for
+  the lobby ..." into the status line when the five-minute background write
+  fails, and tries again (and fails again) every five minutes while the phone
+  has no signal. `handleOwnLocationUpdate` does the same with "Couldn't share
+  your location" on every position update while walking without signal. Both
+  overwrite whatever the user just did ("Added Beer.") with a message they
+  cannot act on; with the status banner of #51 it pops up at the bottom of
+  the screen again and again. Keep these messages for actions the user
+  started (adding a drink, switching sharing on) and stay silent for the timed
+  and automatic ones; the "report or stay silent" decision can be a small
+  tested function. Found 2026-11-25.
 
 ## 3. Code health
 
@@ -307,6 +341,13 @@ editor, then tick the line.
   with setup steps (`Secrets.xcconfig`, Supabase). Done 2026-11-15.
 - [ ] **Q8: replace polling with Supabase Realtime** for drinks, motions and
   locations (after S1).
+- [ ] **Q9: the motions are fetched twice every 30 seconds.**
+  `refreshMotionsIfNeeded` loads motions and votes (two requests), then
+  `resolveAndNotifyMotionsIfNeeded` always loads both again, also when no
+  motion was closed and nothing was announced, which is nearly always. That
+  is four requests per phone every 30 seconds just for motions. Fetch again
+  only when this phone closed a motion or wrote a "motion due" note; the
+  "fetch again?" decision can be a small tested function. Found 2026-11-25.
 
 ## 4. UX
 
