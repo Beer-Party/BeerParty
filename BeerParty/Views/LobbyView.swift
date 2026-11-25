@@ -622,14 +622,17 @@ struct LobbyView: View {
     .safeAreaInset(edge: .bottom) {
       // Fixed to the bottom of the screen, so it is seen wherever the form is
       // scrolled to. The form's content ends above it.
-      if !statusMessage.isEmpty {
-        LobbyStatusBanner(message: statusMessage) {
-          statusMessage = ""
+      // The animation is set here so that only the banner moves, not the form.
+      VStack(spacing: 0) {
+        if !statusMessage.isEmpty {
+          LobbyStatusBanner(message: statusMessage) {
+            statusMessage = ""
+          }
+          .transition(.move(edge: .bottom).combined(with: .opacity))
         }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
       }
+      .animation(.easeOut(duration: 0.2), value: statusMessage)
     }
-    .animation(.easeOut(duration: 0.2), value: statusMessage)
     .task {
       await loadLobbyAnalytics()
     }
