@@ -33,7 +33,9 @@ struct ProfileSetupView: View {
   var onSaved: (() -> Void)?
 
   @State private var weightText: String = ""
-  @State private var selectedWeightUnit: WeightUnit = .pounds
+  // Starts in the unit of the phone's region. The saved weight is always pounds.
+  @State private var selectedWeightUnit: WeightUnit =
+    WeightUnitPreference.prefersKilograms(Locale.current.measurementSystem) ? .kilograms : .pounds
   @State private var ageText: String = ""
   @State private var gender: String = ""
   @State private var shareLocationForeground = false
@@ -240,7 +242,10 @@ struct ProfileSetupView: View {
         .execute()
         .value
 
-      weightText = formattedWeight(profile.weight, unit: selectedWeightUnit)
+      weightText = WeightUnitPreference.displayText(
+        pounds: profile.weight,
+        inKilograms: selectedWeightUnit == .kilograms
+      )
       ageText = String(profile.age)
       gender = profile.gender
       shareLocationForeground = profile.shareLocationForeground
