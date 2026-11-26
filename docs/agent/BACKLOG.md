@@ -10,19 +10,27 @@ Files in `supabase/migrations/` that are merged but not yet run against the live
 project. The agent never applies them. Owner: run the file in the Supabase SQL
 editor, then tick the line.
 
-- [ ] `needs-owner`: apply `20261112110000_fix_close_expired_motions_tally.sql`
-  (S3).
-- [ ] `needs-owner`: apply `20261113110000_clear_stale_member_locations.sql` (S5),
-  then run the optional pg_cron block at the bottom of that file once so the expiry
-  runs on a schedule.
+- [x] `20261112110000_fix_close_expired_motions_tally.sql` (S3). Applied
+  2026-11-26.
+- [x] `20261113110000_clear_stale_member_locations.sql` (S5). Applied
+  2026-11-26, with the pg_cron job (every 15 minutes).
+- [x] `20261115110000_create_lobby_events.sql` and
+  `20261125110000_allow_made_it_home_after_closing.sql` (B5 step 2, U12).
+  Applied 2026-11-26.
+
+Nothing is waiting. `supabase/schema.sql` shows the database as it was after
+these four.
 
 ## 1. Privacy and security
 
-- [ ] **S1 `needs-owner`: put the database schema in the repo.** Only the motions
+- [x] **S1: put the database schema in the repo.** Only the motions
   tables are in git (`supabase_motions.sql`). `lobbies`, `lobby_members`,
   `member_state`, `drinks`, `profiles`, `lobby_member_bac_params` and all their RLS
-  policies exist only in the Supabase project, which is currently paused. Owner
-  resumes the project; the agent then dumps the schema into `supabase/migrations/`.
+  policies exist only in the Supabase project. Done 2026-11-26:
+  `supabase/schema.sql` is a snapshot of tables, functions, triggers, policies,
+  grants and storage rules, for reading, not for running. What it showed is in
+  S2, S6, S11, B27 and B28, and in
+  `docs/agent/log/2026-11-26-schema-snapshot.md`.
 - [ ] **S2 `needs-owner` (after S1): joining a lobby should not require every
   signed-in user to be able to read the `lobbies` table.** `joinLobby` looks a lobby
   up by `invite_code` before the user is a member, and `MakeLobbyView` checks code
@@ -31,6 +39,11 @@ editor, then tick the line.
   members' live locations. Fix: a `join_lobby(code, nickname)` security-definer
   function, lobby rows readable by members only, generated codes instead of
   user-chosen ones (minimum is 4 characters today).
+  Confirmed 2026-11-26 from the schema: the policy `lobbies_select_active` lets
+  every signed-in user read every open lobby, invite code included. A
+  `join_lobby(p_invite_code)` function already exists in the database (unused
+  by the app, no nickname, exact upper-case match); the fix can replace it.
+  S11 is the more urgent half of this.
 - [x] **S3: `close_expired_motions` passes motions it should fail.** The query joins
   votes and members in one pass, so the aye count is multiplied by the member count:
   one aye in a five-person lobby counts as 5/5. Fix with separate subqueries
@@ -50,6 +63,14 @@ editor, then tick the line.
   `profiles.weight`, `age`, `gender`.** The client reads other members'
   `profile_pic_path` from `profiles`, so the select policy allows cross-user reads
   of at least that table.
+  Confirmed 2026-11-26 from the schema: they can. `profiles_select_same_lobby`
+  lets anyone who shares a lobby with a user read that user's whole profile
+  row, so weight, age and gender too (the app only asks for the photo path,
+  but a modified client can ask for everything). Fix as a migration file: a
+  view or function that gives other members only `id` and `profile_pic_path`,
+  and the table itself readable by its owner only; the app's two photo
+  queries then read from that. The decision an owner has to make is only
+  whether to apply it.
 - [ ] **S7 `needs-owner` (after S1): there is no way to delete an account.** The
   app creates accounts (Google sign-in plus a profile with weight, age, gender and
   a photo) but only offers "Sign out". App Store review guideline 5.1.1(v) expects
@@ -87,6 +108,23 @@ editor, then tick the line.
   changing the saved profile setting, and say so in the status line ("...
   Your location is no longer shared."). The decision "does sending this stop
   sharing" can be a small tested function. Found 2026-11-26.
+- [ ] **S11: any signed-in user can put themselves into any lobby, without
+  the invite code.** The insert policy `lm_insert_self` on `lobby_members`
+  only checks `user_id = auth.uid()`: not the invite code, not even whether
+  the lobby is open. (A second, stricter policy exists next to it, but one
+  passing policy is enough.) Together with `lobbies_select_active` (S2), which
+  lists every open lobby's id, someone with an account and a modified client
+  can join every open lobby and then read what members can read: live
+  locations, drinks, and the weight, age and gender of every member (S6).
+  `ms_insert_self` on `member_state` has the same gap. Fix as a migration
+  file: drop `lm_insert_self` and `ms_insert_self`, and let a member row be
+  created only through a `join_lobby(code, nickname)` function that checks
+  the code (and a `create_lobby` function for the host), with the app
+  switched to call them. That is most of S2, so do them together, in two
+  steps so that phones on the old version keep working: first a migration
+  that only adds the two functions, and the app calling them; then, once
+  that version is on the phones, a second migration that drops the two loose
+  policies and `lobbies_select_active`. Found 2026-11-26.
 
 ## 2. Bugs
 
@@ -113,9 +151,9 @@ editor, then tick the line.
   `lobby_events` table (migration + client, split over several PRs).
   - [x] Step 1, 2026-11-15: the table and its rules, as
     `supabase/migrations/20261115110000_create_lobby_events.sql`.
-  - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor, then
+  - [x] Step 2: apply that file in the Supabase SQL editor, then
     `20261125110000_allow_made_it_home_after_closing.sql` (U12, merged
-    2026-11-25).
+    2026-11-25). Applied by an owner 2026-11-26.
   - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
     reads the old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
@@ -320,7 +358,9 @@ editor, then tick the line.
   and again in `LobbyBackendService` (for example nickname 24, lobby name 40,
   drink name 40, motion destination 60 characters, counted after trimming),
   with one small tested function that trims and checks. Database limits can
-  follow with S1. Found 2026-11-26.
+  follow with S1. Found 2026-11-26. The database already refuses a nickname
+  of 30 characters or more (`lobby_members_nickname_check`), so joining with
+  one fails today with a general error; keep the app's limit below 30.
 - [ ] **B26: "Made it home" can be sent again and again.** The button is only
   off while one send is running. Every further tap writes another row, and
   every phone in the lobby shows "... is safely at the fortress of dreams."
@@ -331,6 +371,28 @@ editor, then tick the line.
   this user already sent it" check as a tested function. Touches the same
   button as S10; do them on different days or in one pull request. Found
   2026-11-26.
+- [ ] **B27: "Leave Lobby", "Edit Drink" and deleting a drink most likely do
+  nothing.** The database has no DELETE rule for `drinks`, `lobby_members`,
+  `member_state` and `lobby_member_bac_params`, and no UPDATE rule for
+  `drinks` (see the list in `supabase/schema.sql`, section 6). Without a rule
+  such a request is not refused with an error: it changes no rows.
+  `leaveLobby` therefore reports success and the screen closes, but the
+  membership and the drinks are still there and the lobby is back in "Your
+  Lobbies" at the next reload. `updateDrink` and `deleteDrink` get no row
+  back and say the 15 minutes are over, whenever they are tried. ("Delete
+  Lobby" works: the `lobbies` row may be deleted by its creator and
+  everything else goes with it through the foreign keys.) Check on a phone
+  first. Fix as a migration file: delete rules for a user's own rows in
+  those four tables, and an update rule for a user's own drinks, both for
+  drinks limited to the last 15 minutes as the app intends; when a member
+  leaves, their votes on open motions should go too. Found 2026-11-26.
+- [ ] **B28: a drink with half a millilitre or 100 % cannot be saved.**
+  `drinks.volume_ml` is an `integer` column and `abv` is `numeric(4,2)`
+  (at most 99.99). The app sends both as decimals: "Add Drink" with 33.5 ml,
+  or with ABV 100 (which `DrinkInputLimits` allows), is refused by the
+  database and the user sees "Couldn't add the drink". Round the volume to
+  whole millilitres before sending and when reading the form, and cap ABV at
+  99.99 (or widen the columns in the migration of B9b). Found 2026-11-26.
 
 ## 3. Code health
 
