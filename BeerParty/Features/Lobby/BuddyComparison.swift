@@ -11,6 +11,14 @@ struct BuddyComparisonData: Equatable {
   var isEven: Bool {
     bacGap < 0.01
   }
+
+  /// The line above the numbers: who is ahead, or that the two are level.
+  var headline: String {
+    if isEven {
+      return "You and \(buddyNickname) are neck-and-neck."
+    }
+    return "You are \(isAhead ? "ahead of" : "behind") \(buddyNickname)."
+  }
 }
 
 enum BuddyComparison {

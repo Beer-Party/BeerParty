@@ -216,43 +216,12 @@ struct LobbyView: View {
           )
         )
 
-        Section("Buddy") {
-          if snapshot.current.count <= 1 {
-            Text("Buddy comparison appears once another member joins.")
-              .foregroundStyle(.secondary)
-          } else {
-            Picker("Buddy", selection: $selectedBuddyID) {
-              Text("None").tag(UUID?.none)
-              ForEach(buddyCandidates) { buddy in
-                Text(buddy.nickname).tag(Optional(buddy.userId))
-              }
-            }
-
-            if let buddyComparison {
-              VStack(alignment: .leading, spacing: 6) {
-                if buddyComparison.isEven {
-                  Text("You and \(buddyComparison.buddyNickname) are neck-and-neck.")
-                    .font(.subheadline.bold())
-                } else {
-                  Text(
-                    "You are \(buddyComparison.isAhead ? "ahead of" : "behind") \(buddyComparison.buddyNickname)."
-                  )
-                  .font(.subheadline.bold())
-                }
-
-                Text("BAC difference: \(buddyComparison.bacGap, specifier: "%.2f")‰")
-                  .font(.footnote)
-                  .foregroundStyle(.secondary)
-                Text(
-                  "About \(buddyComparison.standardBeerGap, specifier: "%.2f") standard beers \(buddyComparison.isAhead ? "ahead" : "behind")."
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-              }
-              .padding(.vertical, 6)
-            }
-          }
-        }
+        BuddySection(
+          hasOtherMembers: snapshot.current.count > 1,
+          candidates: buddyCandidates,
+          selectedBuddyID: $selectedBuddyID,
+          comparison: buddyComparison
+        )
 
         Section("Lobby Intoxication Graph") {
           if snapshot.points.isEmpty {
