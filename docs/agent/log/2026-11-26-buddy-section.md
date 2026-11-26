@@ -9,7 +9,7 @@
   are neck-and-neck.") is now `BuddyComparisonData.headline`, a plain
   property with two new tests in `BuddyComparisonTests`. Same words as
   before.
-- No behaviour change intended. `LobbyView.swift` goes from 1,711 to 1,681
+- No behaviour change intended. `LobbyView.swift` goes from 1,711 to 1,680
   lines.
 - What is left in `LobbyView.body` for later parts: the header, "Active
   Motion", the graph, the map, "Lobby Actions" and the quick-add emoji row.
