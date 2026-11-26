@@ -84,8 +84,8 @@ struct LobbyViewBackendCoordinator {
     try await backendService.deleteDrink(lobbyID: lobbyID, drinkID: drinkID)
   }
 
-  func sendMadeItHome(lobbyID: UUID, nickname: String) async throws {
-    try await backendService.sendMadeItHome(lobbyID: lobbyID, nickname: nickname)
+  func sendMadeItHome(lobbyID: UUID, nickname: String, closedAt: Date?) async throws {
+    try await backendService.sendMadeItHome(lobbyID: lobbyID, nickname: nickname, closedAt: closedAt)
   }
 
   func createMotion(

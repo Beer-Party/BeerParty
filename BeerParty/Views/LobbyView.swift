@@ -482,7 +482,7 @@ struct LobbyView: View {
             actionGlassButton(
               title: isSendingMadeItHome ? "Sending..." : "Made it home",
               glow: .blue,
-              disabled: isSendingMadeItHome || !isLobbyActive || currentUserNickname == nil
+              disabled: isSendingMadeItHome || !canSendMadeItHome || currentUserNickname == nil
             ) {
               Task { await sendMadeItHome() }
             }
@@ -686,7 +686,12 @@ struct LobbyView: View {
       return true
     }
     guard let lobbyClosedAt else { return false }
-    return Date().timeIntervalSince(lobbyClosedAt) < 5 * 60 * 60
+    return Date().timeIntervalSince(lobbyClosedAt) < MadeItHomeWindow.liveUpdatesAfterClosing
+  }
+
+  // Also after "Closing Time", for as long as the other phones still listen.
+  private var canSendMadeItHome: Bool {
+    MadeItHomeWindow.canSend(isLobbyActive: isLobbyActive, closedAt: lobbyClosedAt, now: now)
   }
 
   private func canModifyDrink(_ drink: LobbyDrink) -> Bool {
@@ -876,12 +881,20 @@ struct LobbyView: View {
       statusMessage = "Could not determine your nickname."
       return
     }
+    guard MadeItHomeWindow.canSend(isLobbyActive: isLobbyActive, closedAt: lobbyClosedAt, now: Date()) else {
+      statusMessage = MadeItHomeWindow.closedMessage
+      return
+    }
 
     isSendingMadeItHome = true
     defer { isSendingMadeItHome = false }
 
     do {
-      try await backendCoordinator.sendMadeItHome(lobbyID: lobbyID, nickname: currentUserNickname)
+      try await backendCoordinator.sendMadeItHome(
+        lobbyID: lobbyID,
+        nickname: currentUserNickname,
+        closedAt: lobbyClosedAt
+      )
       statusMessage = "\(currentUserNickname) is safely at the fortress of dreams."
     } catch {
       statusMessage = UserFacingError.message(couldNot: "send your made-it-home update", error: error)
