@@ -399,7 +399,7 @@ editor, then tick the line.
   function). Two existing lobbies whose codes differ only in case then both
   match: keep the present "multiple lobbies share that invite code" message for
   that. The lasting fix, generated codes, is part of S2. Found 2026-11-22.
-- [ ] **U11: the weight field always starts in pounds.** `ProfileSetupView`
+- [x] **U11: the weight field always starts in pounds.** `ProfileSetupView`
   sets `selectedWeightUnit = .pounds` for everyone and shows "Weight (lbs)". A
   new user in Europe who types 75 without noticing the unit is saved as 75 lbs
   (34 kg). Since B15 the weight really is used, so that user's BAC comes out
@@ -409,7 +409,8 @@ editor, then tick the line.
   each time. Start with the unit of the phone's region (`Locale.current
   .measurementSystem`: kilograms unless it is US or UK), as a small tested
   function, and show the saved weight in that unit. Nothing changes in the
-  database: the weight is still stored in pounds. Found 2026-11-24.
+  database: the weight is still stored in pounds. Found 2026-11-24. Done
+  2026-11-25; device check still open.
 - [ ] **U12: "Made it home" stops working at closing time.** The button is
   disabled when the lobby is closed, and `sendMadeItHome` refuses as well. But
   the host normally taps "Closing Time" when the group leaves the bar, which is
