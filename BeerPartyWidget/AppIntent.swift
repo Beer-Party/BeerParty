@@ -204,8 +204,19 @@ struct CastMotionVoteIntent: LiveActivityIntent {
       return .result(dialog: "No active motion to vote on.")
     }
 
+    // A locked phone keeps the buttons after the motion has been decided, and a
+    // vote would still be written. Ask first; without an answer, carry on as
+    // before.
+    if await motionVotingState(context: context, motionID: motionID) == .over {
+      await hideVoteButtons(context: context)
+      return .result(dialog: "\(MotionVotingState.overMessage)")
+    }
+
     do {
       try await castVote(context: context, motionID: motionID)
+      // One vote per motion from the Lock Screen: a second tap would silently
+      // change it. The vote can still be seen in the app.
+      await hideVoteButtons(context: context)
       let label = vote == .aye ? "Aye" : "Neigh"
       return .result(dialog: "\(label) vote submitted.")
     } catch {
@@ -221,6 +232,56 @@ struct CastMotionVoteIntent: LiveActivityIntent {
       return nil
     }
     return try? JSONDecoder().decode(LobbyQuickAddContext.self, from: data)
+  }
+
+  private func motionVotingState(context: LobbyQuickAddContext, motionID: UUID) async -> MotionVotingState {
+    guard var components = URLComponents(string: "\(context.supabaseURL)/rest/v1/motions") else {
+      return .unknown
+    }
+    components.queryItems = [
+      URLQueryItem(name: "select", value: "status"),
+      URLQueryItem(name: "id", value: "eq.\(motionID.uuidString)")
+    ]
+    guard let url = components.url else {
+      return .unknown
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.addValue(context.supabaseAnonKey, forHTTPHeaderField: "apikey")
+    request.addValue("Bearer \(context.accessToken)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Accept")
+    request.timeoutInterval = 6
+
+    guard let (data, response) = try? await URLSession.shared.data(for: request),
+          let http = response as? HTTPURLResponse
+    else {
+      return .unknown
+    }
+    return MotionVotingState.from(statusCode: http.statusCode, body: data)
+  }
+
+  // Takes "Aye" and "Neigh" off the Lock Screen and the Dynamic Island, and
+  // saves that, so a later tap on a not yet redrawn button finds no motion.
+  private func hideVoteButtons(context: LobbyQuickAddContext) async {
+    let now = Date()
+    LobbyQuickAddStore.saveContext(
+      context.hidingMotionVote(now: now),
+      to: UserDefaults(suiteName: LobbyQuickAddStore.appGroupID)
+    )
+
+    for activity in Activity<LobbyQuickAddActivityAttributes>.activities {
+      let shown = activity.content.state
+      let state = LobbyQuickAddActivityAttributes.ContentState(
+        presets: shown.presets,
+        lastCustomPreset: shown.lastCustomPreset,
+        activeMotionID: shown.activeMotionID,
+        activeMotionTargetText: shown.activeMotionTargetText,
+        shouldShowMotionVote: false,
+        updatedAt: now
+      )
+      await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
+    }
   }
 
   private func castVote(context: LobbyQuickAddContext, motionID: UUID) async throws {

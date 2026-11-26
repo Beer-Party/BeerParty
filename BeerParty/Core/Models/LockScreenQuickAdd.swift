@@ -76,6 +76,55 @@ struct LobbyQuickAddContext: Codable {
   let activeMotionTargetText: String?
   let shouldShowMotionVote: Bool?
   let updatedAt: Date
+
+  /// The same context without the vote buttons: after a vote from the Lock
+  /// Screen, or when voting turned out to be over. The app writes the context
+  /// again, with the buttons if a new motion needs them, the next time the
+  /// lobby screen refreshes.
+  func hidingMotionVote(now: Date) -> LobbyQuickAddContext {
+    LobbyQuickAddContext(
+      lobbyID: lobbyID,
+      lobbyName: lobbyName,
+      userID: userID,
+      accessToken: accessToken,
+      supabaseURL: supabaseURL,
+      supabaseAnonKey: supabaseAnonKey,
+      lastCustomPreset: lastCustomPreset,
+      activeMotionID: activeMotionID,
+      activeMotionTargetText: activeMotionTargetText,
+      shouldShowMotionVote: false,
+      updatedAt: now
+    )
+  }
+}
+
+/// Whether a vote on a motion still counts, as far as one quick request can
+/// tell. Used by the Lock Screen vote buttons, which only an open lobby screen
+/// would otherwise take away.
+enum MotionVotingState: Equatable {
+  case open
+  /// The motion has been decided, or it is gone together with its lobby.
+  case over
+  /// No answer: offline, sign-in expired, or a reply that could not be read.
+  case unknown
+
+  static let overMessage = "Voting on this motion is over."
+
+  /// Reads the answer to `GET /rest/v1/motions?select=status&id=eq.<motion id>`.
+  static func from(statusCode: Int, body: Data) -> MotionVotingState {
+    guard (200..<300).contains(statusCode),
+          let rows = try? JSONDecoder().decode([Row].self, from: body)
+    else {
+      return .unknown
+    }
+
+    guard let row = rows.first else { return .over }
+    return row.status == "active" ? .open : .over
+  }
+
+  private struct Row: Decodable {
+    let status: String
+  }
 }
 
 /// Whether drinks can still be added to a lobby, as far as one quick request can
@@ -147,6 +196,16 @@ enum LobbyQuickAddStore {
   /// The custom drink presets are kept: they hold no account data.
   static func removeContext(from defaults: UserDefaults?) {
     defaults?.removeObject(forKey: key)
+  }
+
+  static func saveContext(_ context: LobbyQuickAddContext, to defaults: UserDefaults?) {
+    guard let defaults, let data = try? JSONEncoder().encode(context) else { return }
+    defaults.set(data, forKey: key)
+  }
+
+  static func loadContext(from defaults: UserDefaults?) -> LobbyQuickAddContext? {
+    guard let data = defaults?.data(forKey: key) else { return nil }
+    return try? JSONDecoder().decode(LobbyQuickAddContext.self, from: data)
   }
 }
 

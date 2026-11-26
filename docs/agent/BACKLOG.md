@@ -264,7 +264,7 @@ editor, then tick the line.
   and at once when a shown member has no BAC values; keep "does the roster
   differ" as a tested function that also compares nicknames and values. Found
   2026-11-24.
-- [ ] **B22: the Lock Screen vote buttons stay after voting, and still vote
+- [x] **B22: the Lock Screen vote buttons stay after voting, and still vote
   when the motion is over.** `CastMotionVoteIntent` sends the vote and says
   "Aye vote submitted.", but changes neither the saved quick-add context nor
   the Live Activity, so "Aye" and "Neigh" stay on the Lock Screen. A second tap
