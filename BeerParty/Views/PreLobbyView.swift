@@ -82,8 +82,11 @@ struct PreLobbyView: View {
                 }
                 .padding(.vertical, 8)
               } else if memberLobbies.isEmpty {
-                Text("You are not a member of any lobbies yet.")
-                  .foregroundStyle(.secondary)
+                // Not while the list could not be loaded: the error line below
+                // says so, and "no lobbies yet" would be a guess.
+                if lobbyLoadError.isEmpty {
+                  LobbyListEmptyState()
+                }
               } else {
                 ForEach(memberLobbies) { lobby in
                   Button {
