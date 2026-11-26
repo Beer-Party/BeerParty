@@ -64,9 +64,17 @@ struct QuickAddDrinkIntent: LiveActivityIntent {
 
     // The app refuses drinks for a closed lobby; a locked phone never opened the
     // lobby screen to find out, so ask here. Without an answer, carry on as before.
-    if await lobbyOpenState(context: context) == .closed {
+    let openState = await lobbyOpenState(context: context)
+    if openState == .closed {
       await endLiveActivity()
       return .result(dialog: "This lobby is closed. Drinks can no longer be added.")
+    }
+    if openState == .gone {
+      // Nothing can be added to a deleted lobby again, so the saved sign-in for
+      // these buttons goes as well.
+      LobbyQuickAddStore.removeContext(from: UserDefaults(suiteName: LobbyQuickAddStore.appGroupID))
+      await endLiveActivity()
+      return .result(dialog: "\(LobbyOpenState.goneMessage)")
     }
 
     do {

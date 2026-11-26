@@ -93,6 +93,8 @@ struct LobbyView: View {
   @State private var isPastMotionsExpanded = false
   @State private var selectedBuddyID: UUID?
   @State private var lobbyClosedAt: Date?
+  @State private var isLobbyGone = false
+  @State private var isShowingLobbyGoneAlert = false
   @State private var isDrinkHistoryExpanded = false
   @State private var editingDrink: LobbyDrink?
   @State private var editDraft = DrinkDraft()
@@ -601,6 +603,9 @@ struct LobbyView: View {
         onSave: { Task { await saveDrinkEdit(drink) } }
       )
     }
+    .alert(LobbyOpenState.goneMessage, isPresented: $isShowingLobbyGoneAlert) {
+      Button("OK") { dismiss() }
+    }
     .scrollDismissesKeyboard(.interactively)
     .simultaneousGesture(
       TapGesture().onEnded {
@@ -873,6 +878,10 @@ struct LobbyView: View {
       syncLiveActivityContext()
       return true
     } catch {
+      if LobbyLifecycleError.meansLobbyIsGone(error) {
+        handleLobbyGone()
+        return false
+      }
       statusMessage = UserFacingError.message(couldNot: "add the drink", error: error)
       return false
     }
@@ -933,6 +942,10 @@ struct LobbyView: View {
       await refreshMotionsIfNeeded(force: true)
       syncLiveActivityContext()
     } catch {
+      if LobbyLifecycleError.meansLobbyIsGone(error) {
+        handleLobbyGone()
+        return
+      }
       statusMessage = UserFacingError.message(couldNot: "load the lobby", error: error)
     }
   }
@@ -1041,6 +1054,7 @@ struct LobbyView: View {
 
   @MainActor
   private func refreshLobbyActivityStatus() async {
+    guard !isLobbyGone else { return }
     do {
       let meta = try await backendCoordinator.refreshLobbyMeta(lobbyID: lobbyID)
       lobbyCreatorID = meta.createdBy
@@ -1058,8 +1072,32 @@ struct LobbyView: View {
         statusMessage = "Lobby closed. Drinking is disabled."
       }
     } catch {
-      // Keep existing UI state on transient failures.
+      if LobbyLifecycleError.meansLobbyIsGone(error) {
+        handleLobbyGone()
+      }
+      // Any other failure is passing: keep the screen as it is.
     }
+  }
+
+  // The host deleted the lobby while this phone had it open. Nothing here can
+  // work any more: end quick add and location sharing, say so, and go back to
+  // the hub when the message is confirmed.
+  @MainActor
+  private func handleLobbyGone() {
+    // While this phone is deleting or leaving the lobby itself, that action
+    // closes the screen.
+    guard !isLobbyGone, !isLifecycleActionLoading else { return }
+    isLobbyGone = true
+    isLobbyActive = false
+    // Only when the Lock Screen buttons belong to this lobby, not to another one.
+    if liveActivityService.activeContext()?.lobbyID == lobbyID {
+      liveActivityService.endContext()
+    }
+    isQuickAddWidgetEnabled = false
+    endLocationSharing()
+    editingDrink = nil
+    focusedDrinkInput = nil
+    isShowingLobbyGoneAlert = true
   }
 
   // The parsing of system-event rows lives in LobbySystemEvent.
