@@ -74,6 +74,7 @@ struct LobbyView: View {
   @State private var hasCenteredMap = false
   @State private var hasEndedLocationSharing = false
   @State private var lastOwnLocationUploadAt: Date?
+  @State private var reportsNextLocationFailure = false
   @State private var lockScreenAccessToken: String?
   @State private var lastCustomPreset: QuickAddDrinkPreset?
   @State private var isQuickAddWidgetEnabled = false
@@ -1351,6 +1352,8 @@ struct LobbyView: View {
         shareForeground: currentUserShareForeground,
         shareBackground: currentUserShareForeground && currentUserShareBackground
       )
+      // The first upload after this may say that it failed; later ones do not.
+      reportsNextLocationFailure = currentUserShareForeground
       refreshLocationTrackingState()
     } catch {
       statusMessage = UserFacingError.message(couldNot: "save your location setting", error: error)
@@ -1358,9 +1361,17 @@ struct LobbyView: View {
   }
 
   @MainActor
-  private func handleOwnLocationUpdate(_ location: CLLocation, reportsFailure: Bool = true) async {
+  private func handleOwnLocationUpdate(_ location: CLLocation, isResend: Bool = false) async {
     guard currentUserShareForeground, !hasEndedLocationSharing, shouldContinueLiveUpdates else { return }
     guard let currentUserID else { return }
+
+    // New positions keep coming while walking. Without signal each one fails,
+    // so only the first upload after sharing was switched on reports it.
+    let origin = LobbyWriteOrigin.ofLocationUpload(
+      sharingJustSwitchedOn: reportsNextLocationFailure,
+      isResend: isResend
+    )
+    reportsNextLocationFailure = false
 
     do {
       let uploadedAt = Date()
@@ -1374,7 +1385,7 @@ struct LobbyView: View {
       lastOwnLocationUploadAt = uploadedAt
       await refreshMemberLocations()
     } catch {
-      if reportsFailure {
+      if origin.reportsFailure {
         statusMessage = UserFacingError.message(couldNot: "share your location", error: error)
       }
     }
@@ -1383,7 +1394,7 @@ struct LobbyView: View {
   // iOS reports a position only after 25 metres of movement, and the map hides
   // pins older than five minutes. Sends the last known position again so a
   // member who stays in one place stays on the map. A failed send is tried
-  // again on the next timer tick, without a message.
+  // again on the next timer tick.
   @MainActor
   private func resendOwnLocationIfDue() async {
     let lastLocation = locationTrackingService.lastLocation
@@ -1394,7 +1405,7 @@ struct LobbyView: View {
       now: Date()
     ), let lastLocation else { return }
 
-    await handleOwnLocationUpdate(lastLocation, reportsFailure: false)
+    await handleOwnLocationUpdate(lastLocation, isResend: true)
   }
 
   @MainActor
@@ -1694,7 +1705,11 @@ struct LobbyView: View {
       lastBacSyncedAt = timestamp
       lastBacSyncedValue = myBAC
     } catch {
-      statusMessage = UserFacingError.message(couldNot: "update your BAC for the lobby", error: error)
+      // The five-minute timer tries again by itself; a message every five
+      // minutes without signal would only replace what the user just did.
+      if LobbyWriteOrigin.ofBACWrite(forced: force).reportsFailure {
+        statusMessage = UserFacingError.message(couldNot: "update your BAC for the lobby", error: error)
+      }
     }
   }
 

@@ -286,7 +286,7 @@ editor, then tick the line.
   under the field, as a small tested function like `DrinkInputLimits`.
   Whether there should be a minimum age (the legal drinking age differs by
   country) is an owner decision and not part of this item. Found 2026-11-25.
-- [ ] **B24: background failures put an error on the screen every few
+- [x] **B24: background failures put an error on the screen every few
   minutes.** `syncCurrentUserBACIfNeeded` writes "Couldn't update your BAC for
   the lobby ..." into the status line when the five-minute background write
   fails, and tries again (and fails again) every five minutes while the phone
