@@ -84,6 +84,12 @@ struct ProfileSetupView: View {
           TextField("Weight (\(selectedWeightUnit.label))", text: $weightText)
             .keyboardType(.decimalPad)
 
+          if let weightLimitMessage {
+            Text(weightLimitMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+          }
+
           Picker("Weight unit", selection: $selectedWeightUnit) {
             ForEach(WeightUnit.allCases) { unit in
               Text(unit.label).tag(unit)
@@ -96,6 +102,12 @@ struct ProfileSetupView: View {
 
           TextField("Age", text: $ageText)
             .keyboardType(.numberPad)
+
+          if let ageLimitMessage {
+            Text(ageLimitMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+          }
 
           Picker("Gender", selection: $gender) {
             ForEach(genderOptions, id: \.self) { option in
@@ -178,7 +190,21 @@ struct ProfileSetupView: View {
   private var canSubmit: Bool {
     guard backendWeightPounds != nil else { return false }
     guard let age = Int(ageText), age > 0 else { return false }
+    guard weightLimitMessage == nil, ageLimitMessage == nil else { return false }
     return !gender.isEmpty
+  }
+
+  // A slip such as 750 instead of 75 kg: shown under the field, in the unit
+  // the user is typing in.
+  private var weightLimitMessage: String? {
+    ProfileInputLimits.weightMessage(
+      entered: DecimalInput.parse(weightText),
+      inKilograms: selectedWeightUnit == .kilograms
+    )
+  }
+
+  private var ageLimitMessage: String? {
+    ProfileInputLimits.ageMessage(age: Int(ageText))
   }
 
   private var backendWeightPounds: Double? {
@@ -284,7 +310,9 @@ struct ProfileSetupView: View {
       return
     }
 
-    guard let weight = backendWeightPounds, let age = Int(ageText) else {
+    guard let weight = backendWeightPounds, let age = Int(ageText), age > 0,
+          weightLimitMessage == nil, ageLimitMessage == nil
+    else {
       message = "Please enter a valid weight and age."
       return
     }
