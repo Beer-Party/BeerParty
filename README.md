@@ -51,10 +51,11 @@ lobby.
 - **Sign-in** is Google through Supabase Auth. In the Supabase dashboard, enable
   the Google provider and add `beerparty://login-callback` to the allowed
   redirect URLs.
-- **Schema.** Most tables (`lobbies`, `lobby_members`, `member_state`, `drinks`,
-  `profiles`, `lobby_member_bac_params`) exist only in the Supabase project and
-  are not in this repo yet (backlog item S1). The motions tables are in
-  `supabase_motions.sql`.
+- **Schema.** `supabase/schema.sql` is a snapshot of the live database
+  (tables, functions, triggers, access rules, storage rules), taken by reading
+  the project. It is for reading and review; do not run it. It goes out of
+  date when a new migration is applied, until it is taken again.
+  `supabase_motions.sql` is the older, original script for the motions tables.
 - **Migrations** live in `supabase/migrations/`. Nothing applies them
   automatically: an owner runs each new file in the Supabase SQL editor after
   its pull request is merged. `docs/agent/BACKLOG.md` lists the ones still
