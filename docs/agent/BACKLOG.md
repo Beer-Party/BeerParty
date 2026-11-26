@@ -277,7 +277,7 @@ editor, then tick the line.
   request, as `lobbyOpenState` does for drinks) and say "Voting on this motion
   is over." when it is closed. The reading of that answer should be a small
   tested function next to `LobbyOpenState`. Found 2026-11-25.
-- [ ] **B23: the profile accepts any weight and age.** `ProfileSetupView`
+- [x] **B23: the profile accepts any weight and age.** `ProfileSetupView`
   only checks weight > 0 and age > 0. A slip such as 750 instead of 75 kg is
   saved, and since B15 it is really used: that member's BAC comes out about
   ten times too low on every phone in the lobby (the maths has a floor of 40
