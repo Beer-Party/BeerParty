@@ -40,6 +40,31 @@ enum MotionTally {
     return (Double(ayeCount) / Double(members)) > passingShare
   }
 
+  /// A motion this phone has to close, with its result.
+  struct Closing: Equatable {
+    let motionID: UUID
+    let passed: Bool
+  }
+
+  /// The motions among the ones just fetched whose voting is over, with their
+  /// results. Empty nearly every time; only when it is not does the server
+  /// hold something new afterwards, so only then are the motions fetched a
+  /// second time.
+  static func closings(for motions: [LobbyMotion], memberCount: Int, now: Date) -> [Closing] {
+    motions.compactMap { motion in
+      guard motion.isActive,
+            let passed = outcome(
+              ayeCount: motion.ayeCount,
+              voteCount: motion.votes.count,
+              memberCount: memberCount,
+              votingClosesAt: motion.votingClosesAt,
+              now: now
+            )
+      else { return nil }
+      return Closing(motionID: motion.id, passed: passed)
+    }
+  }
+
   /// True when a decided motion passed, its time has come and nobody has
   /// announced it yet.
   static func shouldAnnounceArrival(

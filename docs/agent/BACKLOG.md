@@ -346,7 +346,7 @@ editor, then tick the line.
   with setup steps (`Secrets.xcconfig`, Supabase). Done 2026-11-15.
 - [ ] **Q8: replace polling with Supabase Realtime** for drinks, motions and
   locations (after S1).
-- [ ] **Q9: the motions are fetched twice every 30 seconds.**
+- [x] **Q9: the motions are fetched twice every 30 seconds.**
   `refreshMotionsIfNeeded` loads motions and votes (two requests), then
   `resolveAndNotifyMotionsIfNeeded` always loads both again, also when no
   motion was closed and nothing was announced, which is nearly always. That

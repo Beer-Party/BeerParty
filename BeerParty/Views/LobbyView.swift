@@ -1187,20 +1187,19 @@ struct LobbyView: View {
   private func resolveAndNotifyMotionsIfNeeded(from allMotions: [LobbyMotion]) async {
     let now = Date()
 
-    for motion in allMotions where motion.isActive {
-      guard let passed = MotionTally.outcome(
-        ayeCount: motion.ayeCount,
-        voteCount: motion.votes.count,
-        memberCount: members.count,
-        votingClosesAt: motion.votingClosesAt,
-        now: now
-      ) else { continue }
-
-      try? await backendCoordinator.closeMotion(motionID: motion.id, passed: passed)
+    let closings = MotionTally.closings(for: allMotions, memberCount: members.count, now: now)
+    for closing in closings {
+      try? await backendCoordinator.closeMotion(motionID: closing.motionID, passed: closing.passed)
     }
 
-    let latest = (try? await backendCoordinator.fetchMotions(lobbyID: lobbyID)) ?? allMotions
-    motions = latest
+    // Only a motion closed just now changes what the server holds, so only
+    // then are the motions read again (for the result, which the announcement
+    // below needs). On nearly every refresh nothing was closed.
+    var latest = allMotions
+    if !closings.isEmpty {
+      latest = (try? await backendCoordinator.fetchMotions(lobbyID: lobbyID)) ?? allMotions
+      motions = latest
+    }
 
     for motion in latest where !motion.isActive {
       guard MotionTally.shouldAnnounceArrival(
