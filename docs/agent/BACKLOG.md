@@ -75,6 +75,18 @@ editor, then tick the line.
   short-lived signed links, readable only by people who share a lobby with the
   user. The second needs a storage policy change in Supabase, which only an owner
   can make. Found 2026-11-20.
+- [ ] **S10: after "Made it home" the map goes on showing where the member
+  lives.** `sendMadeItHome` writes the message and nothing else. If location
+  sharing is on, the phone keeps uploading its position while the lobby
+  screen is open (and in the background, when that is switched on), so the
+  pin that the whole lobby sees now marks the member's home, until they
+  switch sharing off themselves or the five hours after closing are over.
+  Friends want to know that someone arrived, not the address. After a
+  successful "Made it home", end location sharing for this lobby visit
+  (`endLocationSharing()`, which also clears the stored position) without
+  changing the saved profile setting, and say so in the status line ("...
+  Your location is no longer shared."). The decision "does sending this stop
+  sharing" can be a small tested function. Found 2026-11-26.
 
 ## 2. Bugs
 
@@ -102,8 +114,8 @@ editor, then tick the line.
   - [x] Step 1, 2026-11-15: the table and its rules, as
     `supabase/migrations/20261115110000_create_lobby_events.sql`.
   - [ ] Step 2 `needs-owner`: apply that file in the Supabase SQL editor, then
-    `20261125110000_allow_made_it_home_after_closing.sql` (U12) once it is
-    merged.
+    `20261125110000_allow_made_it_home_after_closing.sql` (U12, merged
+    2026-11-25).
   - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
     reads the old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
@@ -298,6 +310,27 @@ editor, then tick the line.
   started (adding a drink, switching sharing on) and stay silent for the timed
   and automatic ones; the "report or stay silent" decision can be a small
   tested function. Found 2026-11-25.
+- [ ] **B25: names can be any length.** The nickname ("Join Lobby", "Make
+  Lobby"), the lobby name, a drink's name and a motion's destination are only
+  checked for not being empty. A long nickname (a pasted sentence, or a joke)
+  is shown to everyone: it is cut off in "Live BAC", pushes the labels at the
+  right edge of the graph out of their 90-point margin, and is repeated in
+  every "... is safely at the fortress of dreams." line; a long lobby name
+  does the same to the Lock Screen activity. Limit them where they are typed
+  and again in `LobbyBackendService` (for example nickname 24, lobby name 40,
+  drink name 40, motion destination 60 characters, counted after trimming),
+  with one small tested function that trims and checks. Database limits can
+  follow with S1. Found 2026-11-26.
+- [ ] **B26: "Made it home" can be sent again and again.** The button is only
+  off while one send is running. Every further tap writes another row, and
+  every phone in the lobby shows "... is safely at the fortress of dreams."
+  again in its status banner. The app already reads these rows
+  (`LobbySystemEvent`), so it knows whether the current user has sent one in
+  this lobby: turn the button into a plain "You made it home" line after the
+  first one (kept across leaving and reopening the screen), with the "has
+  this user already sent it" check as a tested function. Touches the same
+  button as S10; do them on different days or in one pull request. Found
+  2026-11-26.
 
 ## 3. Code health
 
@@ -356,6 +389,16 @@ editor, then tick the line.
   is four requests per phone every 30 seconds just for motions. Fetch again
   only when this phone closed a motion or wrote a "motion due" note; the
   "fetch again?" decision can be a small tested function. Found 2026-11-25.
+- [ ] **Q10: a lobby that closed days ago is still polled every 30 seconds.**
+  Opening last week's lobby from "Your Lobbies" starts the same timers as a
+  live one. The drink, member and location refreshes stop by themselves
+  (`shouldContinueLiveUpdates`), but `refreshLobbyActivityStatus` (one
+  request) and `refreshMotionsIfNeeded` (two requests) have no such check and
+  run every 30 seconds for as long as the screen is open, although nothing
+  in a lobby that closed more than five hours ago can change except its
+  deletion. Skip both once the live updates have ended and no motion is
+  still open for voting; pull-to-refresh still reloads everything. The
+  "poll or not" decision can be a small tested function. Found 2026-11-26.
 
 ## 4. UX
 
@@ -414,7 +457,7 @@ editor, then tick the line.
   function, and show the saved weight in that unit. Nothing changes in the
   database: the weight is still stored in pounds. Found 2026-11-24. Done
   2026-11-25; device check still open.
-- [ ] **U12: "Made it home" stops working at closing time.** The button is
+- [x] **U12: "Made it home" stops working at closing time.** The button is
   disabled when the lobby is closed, and `sendMadeItHome` refuses as well. But
   the host normally taps "Closing Time" when the group leaves the bar, which is
   just before people walk home and want to say they arrived. The other phones
@@ -425,7 +468,20 @@ editor, then tick the line.
   migration (B5 step 1, not applied yet) only allows `made_it_home` rows in an
   open lobby; ship a new migration file that relaxes that rule to the same
   five hours, for an owner to apply together with step 2. Found 2026-11-24.
-  Done 2026-11-25 in the pull request that adds
-  `20261125110000_allow_made_it_home_after_closing.sql`; the box is left
-  unticked there only because #53 changes the line right above it. Tick it
-  when merging.
+  Done 2026-11-25 (#59, merged), with
+  `20261125110000_allow_made_it_home_after_closing.sql` for an owner to
+  apply (B5 step 2).
+- [ ] **U13: a forgotten drink can only be added as "just now".**
+  `insertDrink` always saves `consumed_at` as the moment of the tap, and the
+  edit sheet changes name, volume and ABV but not the time. Someone who logs
+  the two beers from the last hour when they remember to gets both at the
+  same minute: the BAC shown is too high at first and stays too high for
+  longer than it should, and the graph shows a jump that did not happen. Add a
+  "When" choice to the "Add Drink" form (now, 15, 30, 45, 60 minutes ago;
+  "now" by default, the quick-add buttons stay "now") and pass the time to
+  `insertDrink`. The 15-minute window for editing and deleting counts from
+  `consumed_at`, so a drink added as "30 minutes ago" could not be corrected
+  at all: note that in the form, or count the window from when it was added
+  (needs a column, so after S1). The time from the choice (never in the
+  future, never before the lobby was made) can be a small tested function.
+  Found 2026-11-26.
