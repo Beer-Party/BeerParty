@@ -20,6 +20,14 @@ enum BACCalculator {
 
     let allDrinkTimes = drinks.map(\.consumedAt)
     let startTime = allDrinkTimes.min() ?? timestamp
+    // A lobby from last week is not simulated up to today: the timeline stops
+    // where everybody is back at zero.
+    let endTime = timelineEnd(
+      members: members,
+      drinks: drinks,
+      paramsByUserId: paramsByUserId,
+      now: timestamp
+    )
 
     for member in sortedMembers {
       let memberDrinks = drinks.filter { $0.userId == member.userId }.sorted { $0.consumedAt < $1.consumedAt }
@@ -28,7 +36,7 @@ enum BACCalculator {
         params: params,
         drinks: memberDrinks,
         start: startTime,
-        end: timestamp,
+        end: endTime,
         stepMinutes: 10
       )
 
@@ -64,13 +72,53 @@ enum BACCalculator {
     return BacSnapshot(current: sortedCurrent, points: points, maxY: maxY)
   }
 
+  /// Where the timeline (and so the graph) ends: the first 10-minute step at
+  /// which every member has absorbed all their drinks and is back at zero, and
+  /// never later than `now`. After that moment nothing changes any more, so
+  /// everybody's BAC at `now` is zero as well.
+  static func timelineEnd(
+    members: [LobbyMemberData],
+    drinks: [LobbyDrink],
+    paramsByUserId: [UUID: LobbyBACParamsData],
+    now: Date,
+    stepMinutes: Int = 10
+  ) -> Date {
+    guard let startTime = drinks.map(\.consumedAt).min(), startTime < now else {
+      return now
+    }
+
+    var end = startTime
+    for member in members {
+      let memberDrinks = drinks.filter { $0.userId == member.userId }
+      guard !memberDrinks.isEmpty else { continue }
+      let simulation = simulateTimeline(
+        params: paramsByUserId[member.userId],
+        drinks: memberDrinks,
+        start: startTime,
+        end: now,
+        stepMinutes: stepMinutes,
+        stopsWhenSober: true
+      )
+      if let soberAt = simulation.points.last?.time, soberAt > end {
+        end = soberAt
+      }
+      if end >= now {
+        return now
+      }
+    }
+    return end
+  }
+
   // Simulates BAC over time using absorption and elimination at fixed time steps.
+  // With `stopsWhenSober` the simulation ends early, at the first step where all
+  // drinks are absorbed and no alcohol is left.
   static func simulateTimeline(
     params: LobbyBACParamsData?,
     drinks: [LobbyDrink],
     start: Date,
     end: Date,
-    stepMinutes: Int
+    stepMinutes: Int,
+    stopsWhenSober: Bool = false
   ) -> BACSimulationResult {
     guard end >= start else {
       return BACSimulationResult(points: [TimelineBACPoint(time: end, bac: 0)], currentBAC: 0)
@@ -114,6 +162,16 @@ enum BACCalculator {
       points.append(TimelineBACPoint(time: nextTime, bac: currentBAC))
 
       currentTime = nextTime
+
+      if stopsWhenSober, alcoholInBodyGrams == 0 {
+        let everythingAbsorbed = sortedDrinks.allSatisfy { drink in
+          let hours = nextTime.timeIntervalSince(drink.consumedAt) / 3600
+          return absorbedFraction(hoursSinceDrink: hours, abv: drink.abv) >= 1
+        }
+        if everythingAbsorbed {
+          break
+        }
+      }
     }
 
     return BACSimulationResult(points: points, currentBAC: points.last?.bac ?? 0)
