@@ -323,6 +323,9 @@ editor, then tick the line.
   - [x] Part 8, 2026-11-24: the "Add Drink" and "Widget" sections are their own
     views, `AddDrinkSection` and `QuickAddWidgetSection`. View code only, so no
     new unit tests.
+  - [x] Part 9, 2026-11-25: the "Motions" section (new motion form and past
+    motions) is its own view, `MotionsSection`. View code only, so no new unit
+    tests.
 - [x] **Q3: fetch member avatars in one query.** `fetchLobbyAnalytics` and
   `fetchMemberLocations` run one `profiles` request per member, the second one every
   20 seconds. Done 2026-11-16.
