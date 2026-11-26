@@ -250,7 +250,7 @@ editor, then tick the line.
   "This lobby was deleted by its host." and go back to the hub; in the widget,
   end the Live Activity as for a closed lobby. The decision ("open", "closed",
   "gone", "unknown") extends the tested `LobbyOpenState`. Found 2026-11-24.
-- [ ] **B21: a member's changed body values or nickname never reach the other
+- [x] **B21: a member's changed body values or nickname never reach the other
   phones.** `refreshMembersIfNeeded` reloads the member list and the BAC values
   only when the set of member ids changes (`LobbyRoster.needsReload`). Since B15
   a member's values in `lobby_member_bac_params` are rewritten when their
