@@ -65,6 +65,9 @@ final class AuthViewModel: ObservableObject {
       // refused, a sign-out on another screen): the Lock Screen quick-add must not
       // keep working with the previous user's access token.
       LobbyLiveActivityService().endContext()
+      // The next person to sign in on this phone should not be offered the
+      // previous user's nickname.
+      LastNickname.clear()
     }
   }
 
