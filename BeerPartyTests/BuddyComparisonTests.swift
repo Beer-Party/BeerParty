@@ -88,4 +88,19 @@ final class BuddyComparisonTests: XCTestCase {
     let expectedGrams = 0.5 * 40 / 0.84
     XCTAssertEqual(result.standardBeerGap, expectedGrams / BuddyComparison.standardBeerGrams, accuracy: 0.0001)
   }
+
+  // MARK: - The line shown above the numbers
+
+  func testHeadlineSaysWhoIsAhead() throws {
+    XCTAssertEqual(try XCTUnwrap(compare(myBAC: 0.9, buddyBAC: 0.4)).headline, "You are ahead of Sam.")
+    XCTAssertEqual(try XCTUnwrap(compare(myBAC: 0.4, buddyBAC: 0.9)).headline, "You are behind Sam.")
+  }
+
+  // A gap below 0.01 is not worth a winner.
+  func testHeadlineForAnEvenPair() throws {
+    XCTAssertEqual(
+      try XCTUnwrap(compare(myBAC: 0.502, buddyBAC: 0.5)).headline,
+      "You and Sam are neck-and-neck."
+    )
+  }
 }
