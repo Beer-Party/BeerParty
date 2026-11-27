@@ -73,6 +73,10 @@ struct LobbyView: View {
   @State private var currentUserShareBackground = false
   @State private var hasCenteredMap = false
   @State private var hasEndedLocationSharing = false
+  // "Made it home" was sent with sharing on: no position is uploaded for the
+  // rest of this visit to the lobby screen, unless the user switches sharing
+  // off and on again. The saved profile setting is not changed.
+  @State private var isSharingPausedAfterHome = false
   @State private var lastOwnLocationUploadAt: Date?
   @State private var reportsNextLocationFailure = false
   @State private var lockScreenAccessToken: String?
@@ -405,8 +409,19 @@ struct LobbyView: View {
 
           Toggle("Share my location in foreground", isOn: $currentUserShareForeground)
             .onChange(of: currentUserShareForeground) { _, _ in
+              // Switching it by hand is the way to share again after "Made it home".
+              isSharingPausedAfterHome = false
               Task { await updateLocationSharingPreference() }
             }
+
+          if MadeItHomeSharing.showsPausedHint(
+            wantsSharing: currentUserShareForeground,
+            pausedAfterHome: isSharingPausedAfterHome
+          ) {
+            Text(MadeItHomeSharing.pausedHint)
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+          }
 
           Toggle("Share my location in background", isOn: $currentUserShareBackground)
             .disabled(!currentUserShareForeground)
@@ -600,6 +615,10 @@ struct LobbyView: View {
       guard shouldContinueLiveUpdates else {
         endLocationSharing()
         return
+      }
+      if isSharingPausedAfterHome {
+        // Tries the clearing of the stored position again if it failed.
+        endLocationSharing()
       }
       Task {
         await resendOwnLocationIfDue()
@@ -874,7 +893,23 @@ struct LobbyView: View {
         nickname: currentUserNickname,
         closedAt: lobbyClosedAt
       )
-      statusMessage = "\(currentUserNickname) is safely at the fortress of dreams."
+      // Friends want to know that someone arrived, not where they live: stop
+      // uploading the position and remove the stored one.
+      let endsSharing = MadeItHomeSharing.endsSharing(
+        wantsSharing: currentUserShareForeground,
+        pausedAfterHome: isSharingPausedAfterHome
+      )
+      if endsSharing {
+        isSharingPausedAfterHome = true
+        endLocationSharing()
+        // The own pin goes at once; the other phones drop it at their next
+        // 20-second refresh.
+        locationRows.removeAll { $0.userId == currentUserID }
+      }
+      statusMessage = MadeItHomeSharing.confirmation(
+        nickname: currentUserNickname,
+        endedSharing: endsSharing
+      )
     } catch {
       statusMessage = UserFacingError.message(couldNot: "send your made-it-home update", error: error)
     }
@@ -1274,6 +1309,12 @@ struct LobbyView: View {
       return
     }
 
+    // Also reached by pull-to-refresh, which must not start sharing again.
+    guard !isSharingPausedAfterHome else {
+      endLocationSharing()
+      return
+    }
+
     if currentUserShareForeground {
       hasEndedLocationSharing = false
       locationTrackingService.startTracking(allowsBackground: currentUserShareBackground)
@@ -1330,7 +1371,8 @@ struct LobbyView: View {
 
   @MainActor
   private func handleOwnLocationUpdate(_ location: CLLocation, isResend: Bool = false) async {
-    guard currentUserShareForeground, !hasEndedLocationSharing, shouldContinueLiveUpdates else { return }
+    guard currentUserShareForeground, !hasEndedLocationSharing, !isSharingPausedAfterHome,
+          shouldContinueLiveUpdates else { return }
     guard let currentUserID else { return }
 
     // New positions keep coming while walking. Without signal each one fails,
@@ -1367,7 +1409,8 @@ struct LobbyView: View {
   private func resendOwnLocationIfDue() async {
     let lastLocation = locationTrackingService.lastLocation
     guard LocationResend.isDue(
-      isSharing: currentUserShareForeground && !hasEndedLocationSharing && shouldContinueLiveUpdates,
+      isSharing: currentUserShareForeground && !hasEndedLocationSharing
+        && !isSharingPausedAfterHome && shouldContinueLiveUpdates,
       hasLocation: lastLocation != nil,
       lastUploadAt: lastOwnLocationUploadAt,
       now: Date()

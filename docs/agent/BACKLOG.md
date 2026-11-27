@@ -96,7 +96,7 @@ these four.
   short-lived signed links, readable only by people who share a lobby with the
   user. The second needs a storage policy change in Supabase, which only an owner
   can make. Found 2026-11-20.
-- [ ] **S10: after "Made it home" the map goes on showing where the member
+- [x] **S10: after "Made it home" the map goes on showing where the member
   lives.** `sendMadeItHome` writes the message and nothing else. If location
   sharing is on, the phone keeps uploading its position while the lobby
   screen is open (and in the background, when that is switched on), so the
