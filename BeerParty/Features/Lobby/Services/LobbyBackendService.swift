@@ -472,6 +472,20 @@ struct LobbyBackendService {
       .from("drinks")
       .insert(marker)
       .execute()
+    await recordLobbyEvent(.lobbyClosed(lobbyID: lobbyID))
+  }
+
+  // Also writes the event to `lobby_events`, the table that takes over from the
+  // prefixed rows in `drinks` (backlog B5). Nothing reads it yet, so this is
+  // best effort and never fails the action: the table refuses what its rules
+  // do not allow (a second "closed" for a lobby, a second "due" for a motion,
+  // "made it home" when this phone's view of the lobby is out of date), and
+  // the prefixed row has already been written.
+  private func recordLobbyEvent(_ event: LobbyEventRequest) async {
+    _ = try? await supabase
+      .from("lobby_events")
+      .insert(event)
+      .execute()
   }
 
   // Removes the current user from this lobby and deletes their lobby-specific data.
@@ -700,6 +714,7 @@ struct LobbyBackendService {
       .from("drinks")
       .insert(request)
       .execute()
+    await recordLobbyEvent(.madeItHome(lobbyID: lobbyID))
   }
 
   func createMotion(
@@ -848,6 +863,7 @@ struct LobbyBackendService {
       .from("drinks")
       .insert(marker)
       .execute()
+    await recordLobbyEvent(.motionDue(lobbyID: lobbyID, motionID: motionID))
 
     return true
   }
