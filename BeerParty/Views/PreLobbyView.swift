@@ -26,12 +26,7 @@ struct PreLobbyView: View {
   var body: some View {
     NavigationStack {
       ZStack {
-        LinearGradient(
-          colors: [Color.orange.opacity(0.16), Color.yellow.opacity(0.08), Color.clear],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        AeroBackground()
 
         ScrollView {
           VStack(spacing: 14) {
@@ -41,7 +36,7 @@ struct PreLobbyView: View {
 
               VStack(alignment: .leading, spacing: 2) {
                 Text("Lobby Hub")
-                  .font(.title2.bold())
+                  .font(.system(.title2, design: .rounded).weight(.bold))
                 Text("Pick up where the party left off.")
                   .font(.footnote)
                   .foregroundStyle(.secondary)
@@ -50,7 +45,7 @@ struct PreLobbyView: View {
               Spacer()
             }
             .padding(14)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .aeroCard()
 
             HStack(spacing: 10) {
               Button {
@@ -59,7 +54,7 @@ struct PreLobbyView: View {
                 Label("Join Lobby", systemImage: "person.2.fill")
                   .frame(maxWidth: .infinity)
               }
-              .buttonStyle(.borderedProminent)
+              .buttonStyle(AeroGlossButtonStyle())
 
               Button {
                 isShowingCreateLobby = true
@@ -67,12 +62,12 @@ struct PreLobbyView: View {
                 Label("Make Lobby", systemImage: "sparkles")
                   .frame(maxWidth: .infinity)
               }
-              .buttonStyle(.bordered)
+              .buttonStyle(LiquidGlassButtonStyle())
             }
 
             VStack(alignment: .leading, spacing: 10) {
               Text("Your Lobbies")
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
 
               if isLoadingLobbies && memberLobbies.isEmpty {
                 HStack {
@@ -111,7 +106,7 @@ struct PreLobbyView: View {
               }
             }
             .padding(14)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .aeroCard()
           }
           .padding(.horizontal, 14)
           .padding(.vertical, 10)
@@ -211,7 +206,8 @@ struct PreLobbyView: View {
           .font(.caption2.bold())
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(Color.green.opacity(0.2), in: Capsule())
+          .foregroundStyle(AeroTheme.leaf)
+          .background(AeroTheme.leaf.opacity(0.18), in: Capsule())
       } else {
         Text(formattedLobbyDate(lobby.createdAt))
           .font(.caption)
@@ -222,12 +218,12 @@ struct PreLobbyView: View {
     .padding(.vertical, 10)
     .background(
       RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .fill(lobby.isActive ? Color.yellow.opacity(0.2) : Color.gray.opacity(0.08))
+        .fill(lobby.isActive ? AeroTheme.aqua.opacity(0.16) : Color.white.opacity(0.05))
         .overlay(
           RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .stroke(lobby.isActive ? Color.yellow.opacity(0.85) : Color.gray.opacity(0.2), lineWidth: lobby.isActive ? 1.4 : 1)
+            .stroke(lobby.isActive ? AeroTheme.aqua.opacity(0.75) : Color.white.opacity(0.12), lineWidth: lobby.isActive ? 1.2 : 1)
         )
-        .shadow(color: lobby.isActive ? Color.yellow.opacity(0.55) : .clear, radius: lobby.isActive ? 9 : 0, x: 0, y: 0)
+        .shadow(color: lobby.isActive ? AeroTheme.aqua.opacity(0.35) : .clear, radius: lobby.isActive ? 8 : 0, x: 0, y: 0)
     )
   }
 

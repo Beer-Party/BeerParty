@@ -15,26 +15,14 @@ struct BeerPartyApp: App {
   var body: some Scene {
     WindowGroup {
       ZStack {
-        LinearGradient(
-          colors: [
-            Color.black,
-            Color(red: 0.06, green: 0.06, blue: 0.1),
-            Color.black
-          ],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        // Seen behind the screens that have no background of their own (the
+        // profile check, its retry screen).
+        AeroBackground()
 
         RootView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-              .fill(Color.black.opacity(0.25))
-          )
-          .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-          .rainbowGlowFrame()
       }
+      .tint(AeroTheme.aqua)
       .preferredColorScheme(.dark)
       .buttonStyle(LiquidGlassButtonStyle())
       .environmentObject(authVM)
