@@ -17,9 +17,11 @@ editor, then tick the line.
 - [x] `20261115110000_create_lobby_events.sql` and
   `20261125110000_allow_made_it_home_after_closing.sql` (B5 step 2, U12).
   Applied 2026-11-26.
+- [ ] `20261127110000_drinks_volume_abv_limits.sql` (B9b). Waiting once its
+  pull request is merged.
 
-Nothing is waiting. `supabase/schema.sql` shows the database as it was after
-these four.
+`supabase/schema.sql` shows the database as it was after the four files
+applied on 2026-11-26.
 
 ## 1. Privacy and security
 
@@ -183,7 +185,7 @@ these four.
   above a sane maximum (for example 2000 ml) in the add form, the edit sheet and
   `updateDrink`, with a short message; add a check constraint as a migration file
   once S1 is done. Found 2026-11-17.
-- [ ] **B9b (after S1): database check constraint for drink volume and ABV.**
+- [x] **B9b (after S1): database check constraint for drink volume and ABV.**
   Split out of B9, whose app-side limits are in the pull request of 2026-11-18.
   A migration file adding `check (volume_ml >= 0 and volume_ml <= 2000 and abv >= 0
   and abv <= 100)` to `drinks` (system-event rows use 0 and 0), so a modified
