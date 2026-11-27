@@ -17,6 +17,8 @@ struct LoginView: View {
   @State private var acceptsNoDrinkDrive = false
   @State private var acceptsNoOverintoxicationDanger = false
   @State private var acceptsCareForLobbyMembers = false
+  /// The nonce of the Apple sign-in that is under way (see `AppleSignIn`).
+  @State private var appleSignInNonce: String?
 
   var body: some View {
     NavigationStack {
@@ -84,6 +86,22 @@ struct LoginView: View {
           .padding(14)
           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
+          // Apple's own button, so it follows Apple's rules for how it looks.
+          SignInWithAppleButton(.continue) { request in
+            let nonce = AppleSignIn.randomNonce()
+            appleSignInNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = AppleSignIn.sha256(nonce)
+          } onCompletion: { result in
+            Task { await finishAppleSignIn(result) }
+          }
+          .signInWithAppleButtonStyle(.white)
+          .frame(maxWidth: .infinity)
+          .frame(height: 48)
+          .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+          .disabled(isLoading || !canProceedToLogin)
+          .opacity(canProceedToLogin ? 1 : 0.5)
+
           Button(isLoading ? "Signing in..." : "Continue with Google") {
             Task { await signInWithGoogle() }
           }
@@ -130,6 +148,48 @@ struct LoginView: View {
       )
     } catch {
       message = "Google sign-in failed: \(readableAuthError(error))"
+    }
+  }
+
+  // Apple has signed the user in on the phone (or not); Supabase checks Apple's
+  // identity token and opens the session. The rest is the same as for Google:
+  // AuthViewModel hears about the new session and shows the app.
+  @MainActor
+  private func finishAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+    let nonce = appleSignInNonce
+    appleSignInNonce = nil
+
+    switch result {
+    case .failure(let error):
+      // Closing Apple's sheet is not an error.
+      message = AppleSignIn.isCancellation(error)
+        ? ""
+        : "Apple sign-in failed: \(UserFacingError.message(couldNot: "sign in", error: error))"
+
+    case .success(let authorization):
+      guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+            let idToken = AppleSignIn.identityToken(from: credential.identityToken),
+            let nonce
+      else {
+        message = "Apple sign-in failed: Apple sent no sign-in token. Please try again."
+        return
+      }
+
+      isLoading = true
+      message = ""
+      defer { isLoading = false }
+
+      do {
+        try await supabase.auth.signInWithIdToken(
+          credentials: OpenIDConnectCredentials(
+            provider: .apple,
+            idToken: idToken,
+            nonce: nonce
+          )
+        )
+      } catch {
+        message = "Apple sign-in failed: \(UserFacingError.message(couldNot: "sign in", error: error))"
+      }
     }
   }
 

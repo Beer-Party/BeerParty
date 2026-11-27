@@ -48,9 +48,13 @@ lobby.
 
 ## Supabase
 
-- **Sign-in** is Google through Supabase Auth. In the Supabase dashboard, enable
-  the Google provider and add `beerparty://login-callback` to the allowed
-  redirect URLs.
+- **Sign-in** is Google or Apple through Supabase Auth. In the Supabase
+  dashboard, enable the Google provider and add `beerparty://login-callback`
+  to the allowed redirect URLs. For "Sign in with Apple", enable the Apple
+  provider and enter the app's bundle identifier under "Client IDs" (no
+  secret key is needed for sign-in from the app itself). The app target has
+  the "Sign in with Apple" capability, which needs a paid Apple Developer
+  team.
 - **Schema.** `supabase/schema.sql` is a snapshot of the live database
   (tables, functions, triggers, access rules, storage rules), taken by reading
   the project. It is for reading and review; do not run it. It goes out of
