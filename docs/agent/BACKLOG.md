@@ -166,8 +166,11 @@ applied on 2026-11-26.
   - [x] Step 2: apply that file in the Supabase SQL editor, then
     `20261125110000_allow_made_it_home_after_closing.sql` (U12, merged
     2026-11-25). Applied by an owner 2026-11-26.
-  - [ ] Step 3 (after step 2): the app writes and reads `lobby_events`, and still
-    reads the old prefixed rows so phones on the old version keep working.
+  - [x] Step 3a, 2026-11-27: the app writes each event to `lobby_events` as
+    well as the old prefixed row (`LobbyEventRequest`). Nothing reads the
+    table yet.
+  - [ ] Step 3b (after 3a): the app reads `lobby_events`, and still reads the
+    old prefixed rows so phones on the old version keep working.
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
     delete them (migration).
 - [x] **B6: a decimal comma is rejected.** `LobbyView` parses volume and ABV with
