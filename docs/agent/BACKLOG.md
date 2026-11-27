@@ -10,6 +10,9 @@ Files in `supabase/migrations/` that are merged but not yet run against the live
 project. The agent never applies them. Owner: run the file in the Supabase SQL
 editor, then tick the line.
 
+- [ ] `20261127120000_join_and_create_lobby_functions.sql` (S11 step 1).
+  Waiting once its pull request is merged. It only adds two functions;
+  nothing changes for users.
 - [x] `20261112110000_fix_close_expired_motions_tally.sql` (S3). Applied
   2026-11-26.
 - [x] `20261113110000_clear_stale_member_locations.sql` (S5). Applied
@@ -127,6 +130,13 @@ applied on 2026-11-26.
   that only adds the two functions, and the app calling them; then, once
   that version is on the phones, a second migration that drops the two loose
   policies and `lobbies_select_active`. Found 2026-11-26.
+  - [x] Step 1a, 2026-11-27: the two functions, as
+    `supabase/migrations/20261127120000_join_and_create_lobby_functions.sql`.
+  - [ ] Step 1b (after an owner has applied that file): the app calls
+    `join_lobby` and `create_lobby` instead of reading `lobbies` and
+    inserting the rows itself.
+  - [ ] Step 2 (after step 1b has shipped): a migration that drops
+    `lm_insert_self`, `ms_insert_self` and `lobbies_select_active`.
 
 ## 2. Bugs
 
