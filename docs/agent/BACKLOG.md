@@ -169,8 +169,9 @@ applied on 2026-11-26.
   - [x] Step 3a, 2026-11-27: the app writes each event to `lobby_events` as
     well as the old prefixed row (`LobbyEventRequest`). Nothing reads the
     table yet.
-  - [ ] Step 3b (after 3a): the app reads `lobby_events`, and still reads the
-    old prefixed rows so phones on the old version keep working.
+  - [x] Step 3b, 2026-11-28: the app reads `lobby_events`, and still reads the
+    old prefixed rows so phones on the old version keep working
+    (`LobbyEventFeed` makes one list of the two, without doubles).
   - [ ] Step 4 (after step 3 has shipped): stop reading the prefixed rows and
     delete them (migration).
 - [x] **B6: a decimal comma is rejected.** `LobbyView` parses volume and ABV with
