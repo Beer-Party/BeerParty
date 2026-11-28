@@ -26,6 +26,7 @@ enum UserFacingError {
       || error is LobbyLifecycleError
       || error is LobbyCreationError
       || error is DrinkMutationError
+      || error is NameLimitError
       || error is ProfileImageError
     else { return nil }
     return (error as? LocalizedError)?.errorDescription

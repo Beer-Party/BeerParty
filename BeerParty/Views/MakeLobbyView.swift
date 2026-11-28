@@ -35,6 +35,12 @@ struct MakeLobbyView: View {
           TextField("Invite code", text: $inviteCode)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+
+          if let nameLimitMessage {
+            Text(nameLimitMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+          }
         } header: {
           Text("New Lobby")
         } footer: {
@@ -78,6 +84,16 @@ struct MakeLobbyView: View {
 
   private var canSubmit: Bool {
     !trimmedName.isEmpty && !trimmedNickname.isEmpty && trimmedInviteCode.count >= 4
+      && nameLimitMessage == nil
+  }
+
+  /// Why the lobby name or the nickname is too long, or nil when both fit.
+  private var nameLimitMessage: String? {
+    let problems = [
+      NameLimits.message(for: lobbyName, kind: .lobbyName),
+      NameLimits.message(for: nickname, kind: .nickname)
+    ].compactMap { $0 }
+    return problems.isEmpty ? nil : problems.joined(separator: " ")
   }
 
   private var trimmedName: String {

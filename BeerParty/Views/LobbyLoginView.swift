@@ -39,6 +39,12 @@ struct LobbyLoginView: View {
             .textInputAutocapitalization(.words)
             .autocorrectionDisabled()
 
+          if let nicknameLimitMessage {
+            Text(nicknameLimitMessage)
+              .font(.footnote)
+              .foregroundStyle(.red)
+          }
+
           // Shown as typed, so a typo is seen before "Join" is tapped.
           TextField("Invite code", text: $inviteCode)
             .textInputAutocapitalization(.never)
@@ -67,7 +73,9 @@ struct LobbyLoginView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.blue)
-            .disabled(isLoading || trimmedInviteCode.isEmpty || trimmedNickname.isEmpty)
+            .disabled(
+              isLoading || trimmedInviteCode.isEmpty || trimmedNickname.isEmpty || nicknameLimitMessage != nil
+            )
           }
           .listRowInsets(EdgeInsets(top: 6, leading: 4, bottom: 6, trailing: 4))
         }
@@ -86,6 +94,11 @@ struct LobbyLoginView: View {
 
   private var trimmedNickname: String {
     nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  /// Why the nickname is too long, or nil when it fits.
+  private var nicknameLimitMessage: String? {
+    NameLimits.message(for: nickname, kind: .nickname)
   }
 
   @MainActor
