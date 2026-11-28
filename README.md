@@ -48,13 +48,24 @@ lobby.
 
 ## Supabase
 
-- **Sign-in** is Google or Apple through Supabase Auth. In the Supabase
+- **Sign-in** is Google, Apple or an email code through Supabase Auth. In the Supabase
   dashboard, enable the Google provider and add `beerparty://login-callback`
   to the allowed redirect URLs. For "Sign in with Apple", enable the Apple
   provider and enter the app's bundle identifier under "Client IDs" (no
   secret key is needed for sign-in from the app itself). The app target has
   the "Sign in with Apple" capability, which needs a paid Apple Developer
   team.
+- **Sign-in with an email code** ("Continue with email") needs three things
+  in the Supabase dashboard, under Authentication:
+  1. The Email provider is switched on (it is by default).
+  2. The email templates "Magic Link" and "Confirm signup" show the code:
+     put `{{ .Token }}` in their text, for example "Your BeerParty code is
+     {{ .Token }}". The default templates only contain a link, and the app
+     cannot use that link: until the templates are changed, the mail arrives
+     without a code and nobody can sign in this way.
+  3. Before release, a real mail sender (Authentication > Emails > SMTP
+     settings). Supabase's built-in sender only delivers a few mails per
+     hour and is meant for trying things out.
 - **Schema.** `supabase/schema.sql` is a snapshot of the live database
   (tables, functions, triggers, access rules, storage rules), taken by reading
   the project. It is for reading and review; do not run it. It goes out of

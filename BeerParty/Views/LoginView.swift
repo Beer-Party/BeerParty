@@ -19,6 +19,7 @@ struct LoginView: View {
   @State private var acceptsCareForLobbyMembers = false
   /// The nonce of the Apple sign-in that is under way (see `AppleSignIn`).
   @State private var appleSignInNonce: String?
+  @State private var isShowingEmailSignIn = false
 
   var body: some View {
     NavigationStack {
@@ -112,6 +113,19 @@ struct LoginView: View {
           .font(.headline)
           .disabled(isLoading || !canProceedToLogin)
 
+          // A third way in, for people with neither account: a one-time code
+          // by mail (see `EmailSignInView`). Small, so the screen still fits.
+          Button("Continue with email") {
+            message = ""
+            isShowingEmailSignIn = true
+          }
+          .buttonStyle(.plain)
+          .font(.subheadline.weight(.semibold))
+          .foregroundStyle(.black.opacity(0.72))
+          .underline()
+          .disabled(isLoading || !canProceedToLogin)
+          .opacity(canProceedToLogin ? 1 : 0.5)
+
           if !message.isEmpty {
             Text(message)
               .font(.footnote)
@@ -125,6 +139,9 @@ struct LoginView: View {
       .navigationBarTitleDisplayMode(.inline)
       .onAppear {
         pulse = true
+      }
+      .sheet(isPresented: $isShowingEmailSignIn) {
+        EmailSignInView()
       }
     }
   }
