@@ -28,10 +28,20 @@ struct LobbyStatusBanner: View {
     .padding(.leading, 14)
     .padding(.trailing, 8)
     .padding(.vertical, 10)
+    // Thicker glass than the form's rows: the form scrolls underneath, and the
+    // message has to stay readable over it.
     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     .overlay(
       RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        .strokeBorder(
+          LinearGradient(
+            colors: [AeroTheme.aqua.opacity(0.70), Color.white.opacity(0.10)],
+            startPoint: .top,
+            endPoint: .bottom
+          ),
+          lineWidth: 1
+        )
+        .allowsHitTesting(false)
     )
     .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 4)
     .padding(.horizontal, 14)

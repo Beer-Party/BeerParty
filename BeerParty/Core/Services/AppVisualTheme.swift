@@ -18,6 +18,22 @@ enum AeroTheme {
   /// The two tones of a glossy button, dark enough for white text on top.
   static let buttonTop = Color(red: 0.05, green: 0.52, blue: 0.74)
   static let buttonBottom = Color(red: 0.06, green: 0.36, blue: 0.78)
+  /// Grid lines and axis labels of a chart on dark glass.
+  static let chartGrid = Color.white.opacity(0.14)
+  static let chartLabel = Color.white.opacity(0.72)
+  /// The lines of a chart, one colour per member: aqua and green first, then
+  /// tones that are far enough apart to tell eight lines from each other on a
+  /// dark background. With more members the colours start again.
+  static let chartPalette: [Color] = [
+    aqua,
+    leaf,
+    Color(red: 1.00, green: 0.78, blue: 0.30),
+    Color(red: 1.00, green: 0.50, blue: 0.62),
+    Color(red: 0.70, green: 0.60, blue: 1.00),
+    Color(red: 1.00, green: 0.60, blue: 0.32),
+    Color(red: 0.94, green: 0.96, blue: 1.00),
+    Color(red: 0.36, green: 0.62, blue: 1.00)
+  ]
 }
 
 /// The background of a screen: a dark blue gradient with three soft lights
@@ -95,6 +111,43 @@ struct AeroCardModifier: ViewModifier {
 extension View {
   func aeroCard(cornerRadius: CGFloat = 20) -> some View {
     modifier(AeroCardModifier(cornerRadius: cornerRadius))
+  }
+
+  /// For a section of a form or list: its rows become frosted glass, with
+  /// quiet lines between them. The form itself needs
+  /// `.scrollContentBackground(.hidden)` so the screen background shows.
+  func aeroRows() -> some View {
+    self
+      .listRowBackground(AeroRowBackground())
+      .listRowSeparatorTint(Color.white.opacity(0.14))
+  }
+}
+
+/// The background of one row of a form in the glass look. The list rounds the
+/// corners of each section itself.
+struct AeroRowBackground: View {
+  var body: some View {
+    ZStack {
+      Rectangle().fill(.ultraThinMaterial)
+      Color.white.opacity(0.04)
+    }
+  }
+}
+
+/// A small capsule that says whether something is live: green "ACTIVE", or a
+/// muted grey for the other state.
+struct AeroStatusPill: View {
+  let text: String
+  let isActive: Bool
+
+  var body: some View {
+    let tone = isActive ? AeroTheme.leaf : Color.white.opacity(0.65)
+    Text(text)
+      .font(.caption2.bold())
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .foregroundStyle(tone)
+      .background(tone.opacity(0.18), in: Capsule())
   }
 }
 

@@ -38,7 +38,8 @@ struct LiveBACSection: View {
               .font(.caption2.weight(.bold))
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(Color.yellow.opacity(0.25), in: Capsule())
+              .foregroundStyle(AeroTheme.aqua)
+              .background(AeroTheme.aqua.opacity(0.20), in: Capsule())
           }
 
           Spacer(minLength: 8)
@@ -66,8 +67,8 @@ struct LiveBACSection: View {
           .fill(
             LinearGradient(
               colors: isCurrentUser
-                ? [Color.yellow, Color.orange]
-                : [Color.orange.opacity(0.55), Color.orange.opacity(0.8)],
+                ? [AeroTheme.aqua, AeroTheme.leaf]
+                : [AeroTheme.sky.opacity(0.55), AeroTheme.aqua.opacity(0.70)],
               startPoint: .leading,
               endPoint: .trailing
             )
