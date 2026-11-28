@@ -798,22 +798,16 @@ struct LobbyBackendService {
       .execute()
   }
 
-  func closeMotion(
-    motionID: UUID,
-    passed: Bool
-  ) async throws {
-    let request = MotionResolveUpdateRequest(
-      status: .closed,
-      passed: passed,
-      resolvedAt: Date()
-    )
-
-    try await supabase
-      .from("motions")
-      .update(request)
-      .eq("id", value: motionID)
-      .eq("status", value: MotionStatus.active.rawValue)
+  /// Asks the database to decide the motions of this lobby whose voting time
+  /// is over (`close_expired_motions`). The database counts the votes and the
+  /// members itself and writes the result; the app no longer writes `status`
+  /// or `passed`. Returns how many motions were closed by this call.
+  func closeExpiredMotions(lobbyID: UUID) async throws -> Int {
+    let closedCount: Int = try await supabase
+      .rpc(MotionServerClosing.functionName, params: ["p_lobby_id": lobbyID.uuidString])
       .execute()
+      .value
+    return closedCount
   }
 
   // Marks the motion as notified once and writes a broadcast marker for lobby members.
