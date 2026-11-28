@@ -89,6 +89,9 @@ struct LobbyView: View {
   @State private var inspectedPoint: BACPoint?
   @State private var isInspectionActive = false
   @State private var isSendingMadeItHome = false
+  /// True once the current user has sent "Made it home" in this lobby: found
+  /// among the lobby's rows when the screen loads, or sent a moment ago.
+  @State private var hasSentMadeItHome = false
   @State private var motionTargetText: String = ""
   @State private var motionDelayMinutes: Int = 15
   @State private var motions: [LobbyMotion] = []
@@ -457,12 +460,22 @@ struct LobbyView: View {
 
         Section("Lobby Actions") {
           VStack(spacing: 16) {
-            actionGlassButton(
-              title: isSendingMadeItHome ? "Sending..." : "Made it home",
-              glow: .blue,
-              disabled: isSendingMadeItHome || !canSendMadeItHome || currentUserNickname == nil
-            ) {
-              Task { await sendMadeItHome() }
+            if hasSentMadeItHome {
+              // Once is enough: every further send would announce it again on
+              // every phone in the lobby.
+              Label(MadeItHomeOnce.sentLine, systemImage: "checkmark.circle.fill")
+                .font(.headline)
+                .foregroundStyle(.green)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+            } else {
+              actionGlassButton(
+                title: isSendingMadeItHome ? "Sending..." : "Made it home",
+                glow: .blue,
+                disabled: isSendingMadeItHome || !canSendMadeItHome || currentUserNickname == nil
+              ) {
+                Task { await sendMadeItHome() }
+              }
             }
 
             if currentUserIsCreator {
@@ -879,6 +892,7 @@ struct LobbyView: View {
       statusMessage = "Could not determine your nickname."
       return
     }
+    guard !hasSentMadeItHome, !isSendingMadeItHome else { return }
     guard MadeItHomeWindow.canSend(isLobbyActive: isLobbyActive, closedAt: lobbyClosedAt, now: Date()) else {
       statusMessage = MadeItHomeWindow.closedMessage
       return
@@ -893,6 +907,7 @@ struct LobbyView: View {
         nickname: currentUserNickname,
         closedAt: lobbyClosedAt
       )
+      hasSentMadeItHome = true
       // Friends want to know that someone arrived, not where they live: stop
       // uploading the position and remove the stored one.
       let endsSharing = MadeItHomeSharing.endsSharing(
@@ -926,6 +941,10 @@ struct LobbyView: View {
       isLobbyActive = meta.isActive
       lobbyCreatorID = meta.createdBy
       currentUserID = payload.currentUserID
+      // Never back to false here: a reload that started before a send finished
+      // does not have the new row yet.
+      hasSentMadeItHome = hasSentMadeItHome
+        || MadeItHomeOnce.hasSent(in: payload.drinks, userID: payload.currentUserID)
       if let authContext = try? await backendCoordinator.currentSessionAuthContext() {
         lockScreenAccessToken = authContext.accessToken
       }

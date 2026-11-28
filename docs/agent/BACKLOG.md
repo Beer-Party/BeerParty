@@ -376,7 +376,7 @@ applied on 2026-11-26.
   follow with S1. Found 2026-11-26. The database already refuses a nickname
   of 30 characters or more (`lobby_members_nickname_check`), so joining with
   one fails today with a general error; keep the app's limit below 30.
-- [ ] **B26: "Made it home" can be sent again and again.** The button is only
+- [x] **B26: "Made it home" can be sent again and again.** The button is only
   off while one send is running. Every further tap writes another row, and
   every phone in the lobby shows "... is safely at the fortress of dreams."
   again in its status banner. The app already reads these rows
@@ -385,7 +385,8 @@ applied on 2026-11-26.
   first one (kept across leaving and reopening the screen), with the "has
   this user already sent it" check as a tested function. Touches the same
   button as S10; do them on different days or in one pull request. Found
-  2026-11-26.
+  2026-11-26. Done 2026-11-28 in the app (`MadeItHomeOnce`); the database
+  still accepts a second one from a modified client.
 - [ ] **B27: "Leave Lobby", "Edit Drink" and deleting a drink most likely do
   nothing.** The database has no DELETE rule for `drinks`, `lobby_members`,
   `member_state` and `lobby_member_bac_params`, and no UPDATE rule for
