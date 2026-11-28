@@ -106,6 +106,9 @@ struct LobbyView: View {
   @State private var isSavingDrinkEdit = false
   @State private var drinkMutationInFlightID: UUID?
   @State private var bacSnapshotCache = BACSnapshotCache()
+  // "Made it home", "lobby closed" and "motion due" as read so far, from the
+  // prefixed rows in `drinks` and from `lobby_events` (see LobbyEventFeed).
+  @State private var systemNotices: [LobbyNotice] = []
   @FocusState private var focusedDrinkInput: DrinkInputField?
 
   private let liveTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -923,6 +926,7 @@ struct LobbyView: View {
 
     do {
       let (meta, payload) = try await backendCoordinator.loadLobbyAnalytics(lobbyID: lobbyID)
+      let lobbyEvents = await fetchLobbyEventsQuietly(after: nil)
       isLobbyActive = meta.isActive
       lobbyCreatorID = meta.createdBy
       currentUserID = payload.currentUserID
@@ -931,7 +935,14 @@ struct LobbyView: View {
       }
       loadQuickAddWidgetState()
       members = payload.members
-      lobbyClosedAt = payload.drinks.compactMap(closedAtTime).max()
+      // Everything that has happened so far is known from here on and is not
+      // announced; only what the polls bring later is.
+      systemNotices = LobbyEventFeed.merge(
+        known: [],
+        incoming: LobbyEventFeed.notices(fromDrinkRows: payload.drinks)
+          + LobbyEventFeed.notices(fromEvents: lobbyEvents)
+      ).all
+      lobbyClosedAt = LobbyEventFeed.closedAt(in: systemNotices)
       drinks = payload.drinks.filter { !isSystemEvent($0) }
       bacParamsByUserId = payload.bacParamsByUserId
       lastDrinkCursor = payload.drinks.map(\.consumedAt).max() ?? Date()
@@ -1003,17 +1014,18 @@ struct LobbyView: View {
     guard let cursor = lastDrinkCursor else { return }
     do {
       let newDrinks = try await backendCoordinator.fetchNewDrinks(lobbyID: lobbyID, after: cursor)
+      // "Made it home", "lobby closed" and "motion due" arrive as prefixed rows
+      // among the drinks (from every app version) and as rows in `lobby_events`
+      // (from this version on). LobbyEventFeed sees to it that each is
+      // announced once.
+      let newEvents = await fetchLobbyEventsQuietly(
+        after: LobbyEventFeed.eventCursor(in: systemNotices)
+      )
+      announceNewSystemNotices(
+        LobbyEventFeed.notices(fromDrinkRows: newDrinks)
+          + LobbyEventFeed.notices(fromEvents: newEvents)
+      )
       guard !newDrinks.isEmpty else { return }
-
-      if let closedAt = newDrinks.compactMap(closedAtTime).max() {
-        lobbyClosedAt = closedAt
-        isLobbyActive = false
-        statusMessage = "Lobby closed. Live BAC and location updates end in 5 hours."
-      } else if let motionTarget = newDrinks.compactMap(motionArrivalTarget).last {
-        statusMessage = "Motion time: Head towards \(motionTarget)."
-      } else if let latestHomeNickname = newDrinks.compactMap(madeItHomeNickname).last {
-        statusMessage = "\(latestHomeNickname) is safely at the fortress of dreams."
-      }
 
       // The full reload may already have delivered some of these.
       let consumableDrinks = DrinkListReload.drinksNotShown(
@@ -1027,6 +1039,39 @@ struct LobbyView: View {
       lastDrinkCursor = newDrinks.map(\.consumedAt).max()
     } catch {
       // Ignore periodic refresh failures; manual refresh still reloads everything.
+    }
+  }
+
+  // A timed background read: when it fails (no signal, or a database that
+  // does not have the table), the screen goes on with the prefixed rows alone
+  // and says nothing.
+  private func fetchLobbyEventsQuietly(after cursor: Date?) async -> [LobbyEventRecord] {
+    (try? await backendCoordinator.fetchLobbyEvents(lobbyID: lobbyID, after: cursor)) ?? []
+  }
+
+  // Remembers the notices and says the one thing worth saying about the new
+  // ones. Nicknames and destinations come from what is loaded on this screen.
+  private func announceNewSystemNotices(_ incoming: [LobbyNotice]) {
+    guard !incoming.isEmpty else { return }
+    let merged = LobbyEventFeed.merge(known: systemNotices, incoming: incoming)
+    systemNotices = merged.all
+
+    let announcement = LobbyEventFeed.announcement(
+      for: merged.fresh,
+      nickname: { userID in members.first { $0.userId == userID }?.nickname },
+      motionTarget: { motionID in motions.first { $0.id == motionID }?.targetText }
+    )
+    switch announcement {
+    case .lobbyClosed(let closedAt)?:
+      lobbyClosedAt = closedAt
+      isLobbyActive = false
+      statusMessage = "Lobby closed. Live BAC and location updates end in 5 hours."
+    case .motionDue(let target)?:
+      statusMessage = "Motion time: Head towards \(target)."
+    case .madeItHome(let nickname)?:
+      statusMessage = "\(nickname) is safely at the fortress of dreams."
+    case nil:
+      break
     }
   }
 
