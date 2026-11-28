@@ -143,11 +143,10 @@ struct LobbyView: View {
 
         Section {
           Text(lobbyName)
-            .font(.largeTitle.bold())
+            .font(.system(.largeTitle, design: .rounded).weight(.bold))
 
-          Text(isLobbyActive ? "Status: Active" : "Status: Closed")
-            .font(.footnote)
-            .foregroundStyle(isLobbyActive ? .green : .red)
+          AeroStatusPill(text: isLobbyActive ? "ACTIVE" : "CLOSED", isActive: isLobbyActive)
+            .accessibilityLabel(isLobbyActive ? "Status: Active" : "Status: Closed")
 
           Button(isRevealingInviteCode ? "Revealing..." : "Reveal invite code") {
             Task { await revealInviteCodeTemporarily() }
@@ -169,6 +168,7 @@ struct LobbyView: View {
             .font(.footnote)
           }
         }
+        .aeroRows()
 
         if let activeMotion {
           Section("Active Motion") {
@@ -188,27 +188,26 @@ struct LobbyView: View {
               if let currentUserID, activeMotion.votes.contains(where: { $0.userId == currentUserID }) {
                 Text("You already voted.")
                   .font(.subheadline.weight(.semibold))
-                  .foregroundStyle(.green)
+                  .foregroundStyle(AeroTheme.leaf)
               } else {
                 HStack(spacing: 12) {
                   Button(motionVoteInFlightID == activeMotion.id ? "Voting..." : "Aye 🏴‍☠️") {
                     Task { await castMotionVote(motionID: activeMotion.id, vote: .aye) }
                   }
-                  .buttonStyle(.borderedProminent)
-                  .tint(.green)
+                  .buttonStyle(AeroGlossButtonStyle())
                   .disabled(motionVoteInFlightID != nil)
 
                   Button(motionVoteInFlightID == activeMotion.id ? "Voting..." : "Neigh 🐴") {
                     Task { await castMotionVote(motionID: activeMotion.id, vote: .neigh) }
                   }
-                  .buttonStyle(.bordered)
-                  .tint(.orange)
+                  .buttonStyle(LiquidGlassButtonStyle())
                   .disabled(motionVoteInFlightID != nil)
                 }
               }
             }
             .padding(.vertical, 4)
           }
+          .aeroRows()
         }
 
         LiveBACSection(
@@ -219,6 +218,7 @@ struct LobbyView: View {
             currentUserID: currentUserID
           )
         )
+        .aeroRows()
 
         BuddySection(
           hasOtherMembers: snapshot.current.count > 1,
@@ -226,6 +226,7 @@ struct LobbyView: View {
           selectedBuddyID: $selectedBuddyID,
           comparison: buddyComparison
         )
+        .aeroRows()
 
         Section("Lobby Intoxication Graph") {
           if snapshot.points.isEmpty {
@@ -284,18 +285,28 @@ struct LobbyView: View {
             .chartXAxis {
               AxisMarks(values: .automatic(desiredCount: 5)) { value in
                 AxisGridLine()
+                  .foregroundStyle(AeroTheme.chartGrid)
                 AxisTick()
+                  .foregroundStyle(AeroTheme.chartGrid)
                 AxisValueLabel(format: .dateTime.hour().minute(), centered: true)
+                  .foregroundStyle(AeroTheme.chartLabel)
               }
             }
             .chartYAxis {
-              AxisMarks(position: .leading)
+              AxisMarks(position: .leading) { _ in
+                AxisGridLine()
+                  .foregroundStyle(AeroTheme.chartGrid)
+                AxisValueLabel()
+                  .foregroundStyle(AeroTheme.chartLabel)
+              }
             }
+            .chartForegroundStyleScale(range: AeroTheme.chartPalette)
             .chartYScale(domain: 0...chartData.maxY)
             .chartXScale(domain: chartData.xDomain)
             .chartPlotStyle { plotArea in
               plotArea
                 .padding(.trailing, 90)
+                .background(AeroTheme.abyss.opacity(0.35), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .chartOverlay { proxy in
               GeometryReader { geometry in
@@ -366,6 +377,7 @@ struct LobbyView: View {
             }
           }
         }
+        .aeroRows()
 
         Section("Member Map") {
           if scenePhase != .active {
@@ -391,7 +403,12 @@ struct LobbyView: View {
               }
             }
             .frame(height: 280)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+              RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.28), lineWidth: 1)
+                .allowsHitTesting(false)
+            )
             .overlay(alignment: .topTrailing) {
               Button {
                 withAnimation { _ = frameVisibleMembers() }
@@ -438,6 +455,7 @@ struct LobbyView: View {
               .foregroundStyle(.secondary)
           }
         }
+        .aeroRows()
 
         if isLobbyActive {
           AddDrinkSection(
@@ -447,12 +465,14 @@ struct LobbyView: View {
             isSubmitting: isSubmitting,
             onAdd: { Task { await addManualDrink() } }
           )
+          .aeroRows()
 
           QuickAddWidgetSection(
             isEnabled: $isQuickAddWidgetEnabled,
             customPreset: lastCustomPreset,
             onEnabledChange: { enabled in Task { await setQuickAddWidgetEnabled(enabled) } }
           )
+          .aeroRows()
         }
 
         Section("Lobby Actions") {
@@ -506,6 +526,7 @@ struct LobbyView: View {
           isPastExpanded: $isPastMotionsExpanded,
           onCreate: { Task { await createMotion() } }
         )
+        .aeroRows()
 
         DrinkHistorySection(
           drinks: currentUserDrinkHistory,
@@ -515,7 +536,13 @@ struct LobbyView: View {
           onEdit: { beginEditingDrink($0) },
           onDelete: { drink in Task { await deleteDrink(drink) } }
         )
+        .aeroRows()
       }
+      // The whole screen in the rounded typeface, section headings included,
+      // and the form's own grey background away so the glass rows lie on the
+      // Aero background.
+      .fontDesign(.rounded)
+      .scrollContentBackground(.hidden)
 
       if isLobbyActive {
         LazyVGrid(columns: quickAddColumns, spacing: 8) {
@@ -544,6 +571,9 @@ struct LobbyView: View {
         .background(Color.clear)
         .zIndex(3)
       }
+    }
+    .background {
+      AeroBackground()
     }
     .navigationTitle("Lobby")
     .navigationBarTitleDisplayMode(.inline)
@@ -700,6 +730,7 @@ struct LobbyView: View {
         .frame(height: 60)
     }
     .buttonStyle(GlassButtonStyle())
+    .shadow(color: AeroTheme.aqua.opacity(0.25), radius: 8, x: 0, y: 3)
   }
 
   private func actionGlassButton(
@@ -708,16 +739,20 @@ struct LobbyView: View {
     disabled: Bool,
     action: @escaping () -> Void
   ) -> some View {
+    // Glass tinted with the action's colour; the text stays white so it reads
+    // on every tint.
     Button(action: action) {
       Text(title)
-        .font(.headline)
-        .foregroundStyle(glow)
+        .font(.system(.headline, design: .rounded))
+        .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
         .frame(height: 56)
     }
     .buttonStyle(LiquidGlassButtonStyle())
+    .background(glow.opacity(0.30), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     .padding(.horizontal, 18)
-    .shadow(color: glow.opacity(0.65), radius: 10, x: 0, y: 0)
+    .shadow(color: glow.opacity(0.40), radius: 8, x: 0, y: 0)
+    .opacity(disabled ? 0.45 : 1)
     .disabled(disabled)
   }
 
