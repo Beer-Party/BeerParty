@@ -18,6 +18,11 @@ struct MotionsSection: View {
   @Binding var isPastExpanded: Bool
   let onCreate: () -> Void
 
+  /// Why the typed destination is too long, or nil when it fits.
+  private var targetLimitMessage: String? {
+    NameLimits.message(for: targetText, kind: .motionDestination)
+  }
+
   var body: some View {
     Section("Motions") {
       if !isLobbyActive {
@@ -28,6 +33,12 @@ struct MotionsSection: View {
           .textInputAutocapitalization(.sentences)
           .autocorrectionDisabled()
 
+        if let targetLimitMessage {
+          Text(targetLimitMessage)
+            .font(.footnote)
+            .foregroundStyle(.red)
+        }
+
         Picker("In", selection: $delayMinutes) {
           ForEach(Self.delayOptions, id: \.self) { minutes in
             Text("\(minutes) min").tag(minutes)
@@ -37,7 +48,12 @@ struct MotionsSection: View {
         Button(isCreating ? "Creating..." : "Create Motion", action: onCreate)
           .buttonStyle(.borderedProminent)
           .tint(.indigo)
-          .disabled(isCreating || targetText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || hasActiveMotion)
+          .disabled(
+            isCreating
+              || targetText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              || targetLimitMessage != nil
+              || hasActiveMotion
+          )
 
         if hasActiveMotion {
           Text("One active motion at a time.")

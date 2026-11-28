@@ -44,9 +44,14 @@ struct DrinkDraft: Equatable {
     !trimmedName.isEmpty && volumeMl != nil && abv != nil
   }
 
-  /// Why the typed volume or ABV is too large, or nil when it is fine.
+  /// Why the typed name is too long or the volume or ABV too large, or nil
+  /// when all are fine.
   var limitMessage: String? {
-    DrinkInputLimits.message(volumeMl: volumeMl, abv: abv)
+    let problems = [
+      NameLimits.message(for: name, kind: .drinkName),
+      DrinkInputLimits.message(volumeMl: volumeMl, abv: abv)
+    ].compactMap { $0 }
+    return problems.isEmpty ? nil : problems.joined(separator: " ")
   }
 
   /// True when the button that saves the drink should be enabled.

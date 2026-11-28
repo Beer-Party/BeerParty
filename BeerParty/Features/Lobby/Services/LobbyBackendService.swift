@@ -223,6 +223,8 @@ struct LobbyBackendService {
 
   // Joins the current user to the lobby identified by invite code and initializes member rows.
   func joinLobby(inviteCode: String, nickname: String) async throws -> LobbyDestination {
+    try NameLimits.check(nickname, kind: .nickname)
+
     let session = try await supabase.auth.session
     // Capital and small letters do not matter: "Beer" finds the lobby "beer".
     let lobbyRows: [LobbyJoinRow] = try await supabase
@@ -278,6 +280,9 @@ struct LobbyBackendService {
   // Creates a lobby with the current user as its admin member. If a step after
   // the lobby row fails, the lobby row is removed again so the invite code is free.
   func createLobby(name: String, inviteCode: String, nickname: String) async throws -> LobbyDestination {
+    try NameLimits.check(name, kind: .lobbyName)
+    try NameLimits.check(nickname, kind: .nickname)
+
     let session = try await supabase.auth.session
     let userID = session.user.id
 
@@ -583,6 +588,7 @@ struct LobbyBackendService {
     volumeMl: Double,
     abv: Double
   ) async throws -> LobbyDrink {
+    try NameLimits.check(name, kind: .drinkName)
     guard DrinkInputLimits.allows(volumeMl: volumeMl, abv: abv) else {
       throw DrinkMutationError.outOfRange
     }
@@ -630,6 +636,7 @@ struct LobbyBackendService {
     guard !trimmedName.isEmpty, volumeMl > 0, abv >= 0 else {
       throw DrinkMutationError.invalidInput
     }
+    try NameLimits.check(trimmedName, kind: .drinkName)
     guard DrinkInputLimits.allows(volumeMl: volumeMl, abv: abv) else {
       throw DrinkMutationError.outOfRange
     }
@@ -723,6 +730,8 @@ struct LobbyBackendService {
     delayMinutes: Int,
     proposerNickname: String
   ) async throws -> LobbyMotion {
+    try NameLimits.check(targetText, kind: .motionDestination)
+
     let meta = try await fetchLobbyMetaAndApplyExpiry(lobbyID: lobbyID)
     guard meta.isActive else {
       throw LobbyLifecycleError.lobbyClosed

@@ -363,7 +363,9 @@ applied on 2026-11-26.
   started (adding a drink, switching sharing on) and stay silent for the timed
   and automatic ones; the "report or stay silent" decision can be a small
   tested function. Found 2026-11-25.
-- [ ] **B25: names can be any length.** The nickname ("Join Lobby", "Make
+- [x] **B25: names can be any length.** Done 2026-11-28 in the app
+  (`NameLimits`); database limits for the other three names are still open.
+  The nickname ("Join Lobby", "Make
   Lobby"), the lobby name, a drink's name and a motion's destination are only
   checked for not being empty. A long nickname (a pasted sentence, or a joke)
   is shown to everyone: it is cut off in "Live BAC", pushes the labels at the
