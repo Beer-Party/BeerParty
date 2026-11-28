@@ -1191,16 +1191,20 @@ struct LobbyView: View {
   private func resolveAndNotifyMotionsIfNeeded(from allMotions: [LobbyMotion]) async {
     let now = Date()
 
-    let closings = MotionTally.closings(for: allMotions, memberCount: members.count, now: now)
-    for closing in closings {
-      try? await backendCoordinator.closeMotion(motionID: closing.motionID, passed: closing.passed)
+    // The database decides the result, not this phone: it counts the votes and
+    // the members itself. This phone only says "have a look" when one of the
+    // motions it just read seems due. A failure is not shown; the next refresh
+    // asks again.
+    var closedByServer: Int?
+    if MotionServerClosing.shouldAskServer(motions: allMotions, memberCount: members.count, now: now) {
+      closedByServer = try? await backendCoordinator.closeExpiredMotions(lobbyID: lobbyID)
     }
 
     // Only a motion closed just now changes what the server holds, so only
     // then are the motions read again (for the result, which the announcement
     // below needs). On nearly every refresh nothing was closed.
     var latest = allMotions
-    if !closings.isEmpty {
+    if MotionServerClosing.shouldFetchAgain(closedByServer: closedByServer) {
       latest = (try? await backendCoordinator.fetchMotions(lobbyID: lobbyID)) ?? allMotions
       motions = latest
     }

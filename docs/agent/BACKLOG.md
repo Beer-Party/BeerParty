@@ -58,6 +58,15 @@ applied on 2026-11-26.
   polls first computes `passed` and writes it, using a member list that can be stale,
   and the update policy lets any member write any column. Move the tally into a
   function and narrow the policy.
+  - [x] Step 1, 2026-11-28: the app no longer writes a result. It asks the
+    database to close what is due (`close_expired_motions`, in the database
+    since S3) and reads the result back. No migration.
+  - [ ] Step 2 (after step 1 has shipped): a migration that takes the
+    members' right to update `motions` away (`motions_update_member`). Two
+    things use that right today and must move into definer functions in the
+    same file: the trigger `close_motion_when_all_members_voted` (it runs as
+    the voter) and the app's write of `notified_at` when it announces a
+    motion.
 - [x] **S5: stop keeping last-known locations.** `member_state.lat/lng` is cleared
   only when the user turns sharing off. Leaving the lobby view, the lobby closing or
   the 5-hour tail ending all leave the last coordinates in the table. Clear on those

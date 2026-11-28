@@ -110,8 +110,8 @@ struct LobbyViewBackendCoordinator {
     try await backendService.castMotionVote(lobbyID: lobbyID, motionID: motionID, vote: vote)
   }
 
-  func closeMotion(motionID: UUID, passed: Bool) async throws {
-    try await backendService.closeMotion(motionID: motionID, passed: passed)
+  func closeExpiredMotions(lobbyID: UUID) async throws -> Int {
+    try await backendService.closeExpiredMotions(lobbyID: lobbyID)
   }
 
   func notifyMotionArrivalIfNeeded(lobbyID: UUID, motionID: UUID, targetText: String) async throws -> Bool {
